@@ -1,6 +1,20 @@
 {
-  "scopes": [],
+  "xsappname": "psa",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    {"name": "$XSAPPNAME.EmployeeRole", "description": "PSA employee access"},
+    {"name": "$XSAPPNAME.ManagerRole", "description": "PSA project manager access"},
+    {"name": "$XSAPPNAME.FinanceRole", "description": "PSA finance and billing access"},
+    {"name": "$XSAPPNAME.DeptHeadRole", "description": "PSA department reporting access"},
+    {"name": "$XSAPPNAME.AdminRole", "description": "PSA master data administration"}
+  ],
+  "role-templates": [
+    {"name": "PSA_Employee", "description": "Employee timesheet access", "scope-references": ["$XSAPPNAME.EmployeeRole"]},
+    {"name": "PSA_Manager", "description": "Project and timesheet approval access", "scope-references": ["$XSAPPNAME.ManagerRole"]},
+    {"name": "PSA_Finance", "description": "Invoice and billing access", "scope-references": ["$XSAPPNAME.FinanceRole"]},
+    {"name": "PSA_DeptHead", "description": "Department portfolio access", "scope-references": ["$XSAPPNAME.DeptHeadRole"]},
+    {"name": "PSA_Admin", "description": "Master data and configuration access", "scope-references": ["$XSAPPNAME.AdminRole"]}
+  ],
   "attributes": [],
-  "role-templates": [],
   "authorities-inheritance": false
 }
