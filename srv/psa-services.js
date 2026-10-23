@@ -118,10 +118,6 @@ module.exports = cds.service.impl(async function () {
     const tx = cds.tx(req);
     const budget = await tx.run(SELECT.one.from(Budgets).where({ ID: budgetID }));
     if (!budget) return req.reject(404, 'Budget not found.');
-    const projectTimesheets = await tx.run(
-      SELECT.from(TimesheetEntries).columns('hours', 'is_billable', { ref: ['task', 'project_ID'], as: 'project_ID' })
-        .where({ is_billable: true })
-    );
     // Calculate from billable entries on submitted/approved sheets belonging to this project.
     const entries = await tx.run(SELECT.from(TimesheetEntries).where({ is_billable: true }));
     let consumed = 0;
