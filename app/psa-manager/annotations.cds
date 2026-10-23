@@ -1,6 +1,6 @@
-using { ProjectService as service } from '../../srv/psa-services';
+using { ProjectService } from '../../srv/psa-services';
 
-annotate service.Projects with @(
+annotate ProjectService.Projects with @(
   UI.HeaderInfo: {
     TypeName: 'Project',
     TypeNamePlural: 'Projects',
@@ -31,7 +31,7 @@ annotate service.Projects with @(
   ]
 );
 
-annotate service.Tasks with @(
+annotate ProjectService.Tasks with @(
   UI.LineItem: [
     { Value: task_name, Label: 'Task' },
     { Value: status, Label: 'Status' },
@@ -41,7 +41,7 @@ annotate service.Tasks with @(
   ]
 );
 
-annotate service.Timesheets with @(
+annotate ProjectService.Timesheets with @(
   UI.LineItem: [
     { Value: employee.full_name, Label: 'Employee' },
     { Value: project.project_name, Label: 'Project' },
@@ -52,7 +52,7 @@ annotate service.Timesheets with @(
   ]
 );
 
-annotate service.Invoices with @(
+annotate ProjectService.Invoices with @(
   UI.LineItem: [
     { Value: invoice_number, Label: 'Invoice Number' },
     { Value: project.project_name, Label: 'Project' },
