@@ -1,0 +1,6 @@
+ID;scope;threshold_pct;severity;is_active
+a0000000-0000-4000-8000-000000000001;ProjectBudget;75;Warning;true
+a0000000-0000-4000-8000-000000000002;ProjectBudget;90;At Risk;true
+a0000000-0000-4000-8000-000000000003;ProjectBudget;100;Breached;true
+a0000000-0000-4000-8000-000000000004;TaskBurn;80;Warning;true
+a0000000-0000-4000-8000-000000000005;TaskBurn;100;Breached;true
