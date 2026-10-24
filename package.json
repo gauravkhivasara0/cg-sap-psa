@@ -7,6 +7,7 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
+    "start": "cds-serve",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -21,5 +22,8 @@
         "auth": "xsuaa"
       }
     }
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^10"
   }
 }
