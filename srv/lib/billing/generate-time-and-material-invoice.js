@@ -14,6 +14,11 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
   if (!projectID || !periodFrom || !periodTo) {
     return req.reject(400, 'Project and invoice period start/end are required.');
   }
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const isRealDate = value => datePattern.test(String(value)) && !Number.isNaN(Date.parse(String(value) + 'T00:00:00Z')) && new Date(String(value) + 'T00:00:00Z').toISOString().slice(0, 10) === String(value);
+  if (!isRealDate(periodFrom) || !isRealDate(periodTo)) {
+    return req.reject(400, 'Invoice period dates must be real calendar dates in YYYY-MM-DD format.');
+  }
   if (periodTo < periodFrom) {
     return req.reject(400, 'Invoice period end must be on or after its start.');
   }
@@ -32,7 +37,11 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
 
   const budget = await tx.run(cds.ql.SELECT.one.from(Budgets).where({ project_ID: projectID }));
   if (!budget) return req.reject(400, 'Project has no budget and billing rate configured.');
-  if (Number(budget.billing_rate_hr) < 0) return req.reject(400, 'The project billing rate is invalid.');
+  const configuredRate = Number(budget.billing_rate_hr);
+  if (!Number.isFinite(configuredRate) || configuredRate < 0) return req.reject(400, 'The project billing rate must be a valid non-negative number.');
+  if (!budget.currency_code || !/^[A-Z]{3}$/.test(budget.currency_code)) {
+    return req.reject(400, 'Project budget must have a valid three-letter currency code.');
+  }
 
   const approvedSheets = await tx.run(cds.ql.SELECT.from(Timesheets).where({
     project_ID: projectID,
@@ -60,7 +69,7 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
     return req.reject(409, 'One or more approved time entries have already been linked to an invoice. Refresh the period and resolve existing draft invoices before generating another.');
   }
 
-  const rate = Number(budget.billing_rate_hr);
+  const rate = configuredRate;
   const invoiceLines = periodEntries.map(entry => {
     const quantity = Number(entry.hours);
     const lineSubtotal = Math.round(quantity * rate * 100) / 100;
