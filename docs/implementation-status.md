@@ -6,18 +6,25 @@ Baseline: Enterprise PSA FRD and presentation
 
 ## Accepted MVP decisions
 
-- One Employees entity for each person; manager capability represented by `isManager` plus authorization roles and a reporting-manager relationship as appropriate. Do not keep duplicate Manager person records.
+- One Employees entity for each person; manager capability represented by `is_manager` plus authorization roles and a reporting-manager relationship. The separate Managers entity was removed from the model/service projections.
 - Task actual hours and budget consumption use Approved timesheet entries only; budget consumption uses approved billable hours × applicable rate.
 - Budget thresholds are configurable and default to the user's accepted values: below 75% Within Budget/no alert; 75% to below 90% Warning; 90% to below 100% At Risk; 100% or above Breached. Task burn is separate: 80% alert and >=100% stronger alert.
 - Billing defaults: T&M uses approved billable hours × rate; Fixed uses configured eligible milestone fees; Retainer uses configured period fees. Do not double-bill hourly entries under fixed/retainer charges.
 - Money defaults: one currency per project/invoice, no FX in MVP, decimal amounts with two displayed decimal places, configurable tax with no invented rate.
-- Invoice headers, lines, amounts, lifecycle, payments and source references are stored in the database. Generate invoice PDFs on demand; preserve immutable issued invoice values so regenerated PDFs do not change historical financial facts.
+- Invoice headers, lines, amounts, lifecycle, payments and source references are represented in the data model. Generate invoice PDFs on demand; preserve issued invoice values so regenerated PDFs do not change historical financial facts.
 - Invoice source traceability is required: T&M lines link to approved entries; fixed-fee lines link to eligible milestones/contract items.
 - HR, finance and tracker integrations start with mock adapters/contracts that can be replaced. **Email is real from the start, not mocked**, using an approved SMTP relay/API or SAP Alert Notification service where appropriate and available.
-- In-app notifications are persisted. Budget thresholds are configurable and seeded with 75/90/100; task burn alerts are 80/100.
+- In-app notifications and email delivery state are represented in the model. Budget thresholds are configurable with defaults 75/90/100; task burn thresholds are configurable with defaults 80/100. TODO(CONFIG) comments identify values and provider details still needed.
 - Use FRD BTP services where available; ask for subaccount/service configuration when needed. Do not invent service plans, endpoints or credentials.
 - Soft-delete/inactivation is preferred for referenced master data; audit is append-only until a retention policy is confirmed.
 - CI/CD implementation is deferred until the trainer covers SAP Continuous Integration and Delivery. No GitHub workflows.
+
+## Latest model increment (source changes only)
+
+- Updated `db/schema.cds`: removed the separate Managers entity; added `Employees.is_manager`, reporting-manager association and identity/HR TODOs; added invoice lines/source links, issued-invoice snapshot fields, notifications, configurable threshold fields, and Fixed/Retainer billing configuration fields.
+- Updated `srv/psa-services.cds`: removed the Managers projection and exposed invoice-line/source-link and notification projections. Invoice cancellation action is deferred until its handler is implemented.
+- Added TODO(CONFIG) comments where real IdP, HR, email, billing-period, and threshold seed configuration is needed.
+- These changes have **not** been validated by a CDS build or tests. Do not treat them as verified or production-ready.
 
 ## Documentation updated
 
@@ -31,7 +38,7 @@ Baseline: Enterprise PSA FRD and presentation
 | Phase | Status | Notes |
 |---|---|---|
 | 1. Requirements and design | Baseline complete; updates ongoing | Traceability, architecture, entity mapping and decision log documented |
-| 2. CAP data model | In progress | Implement/refine enums, uniqueness, single Employees model, invoice-source mapping, notifications and monetary fields |
+| 2. CAP data model | In progress; first model refinement committed | Single Employees model, invoice lines/source links, notifications, threshold configuration, and invoice snapshot fields added. Controlled enums/code lists, uniqueness constraints, threshold seed data, and model validation remain. No build or tests run. |
 | 3. CAP services and business logic | In progress / not verified | Initial handlers exist; authorization, transactions, roll-ups, alerts, real email, billing and audit need implementation |
 | 4. Fiori Elements screens | Not started as complete apps | Starter annotations only; five real screens and manifests/navigation are missing |
 | 5. Integrations and deployment | Not started | Mock HR/finance/tracker adapters first; real email provider configuration required; MTA and BTP bindings when landscape is known |
