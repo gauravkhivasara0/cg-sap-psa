@@ -28,7 +28,7 @@ Baseline: Enterprise PSA FRD and presentation
 
 ## Latest service-logic increment (source changes only)
 
-- Updated `srv/psa-services.js` so budget consumption and task official actual hours are recalculated from Approved timesheet entries only.
+- The approved-only budget consumption and task actual-hour recalculation logic is now registered from `srv/projects/handlers.js`; the related timesheet validation and workflow actions live in `srv/timesheets/handlers.js`.
 - Applied accepted budget status bands: below 75% Within Budget, 75% to below 90% Warning, 90% to below 100% At Risk, and 100% or above Breached.
 - Strengthened timesheet-entry validation for hour limits and quarter-hour increments, week boundaries, inactive employees, completed tasks, project/task consistency, duplicate task/date entries, and editable Draft/Rejected timesheet status.
 - These source changes have not been validated by a CDS build, tests, or runtime checks. No tests, builds, or runtime checks were run for this increment. No tests, builds, or runtime checks were run for this increment. The current handlers still need additional work for secure employee/manager identity mapping, row-level authorization, transactional notification/email delivery, threshold-crossing alerts, and complete invoice line/source-link generation.
