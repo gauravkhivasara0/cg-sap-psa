@@ -14,7 +14,12 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
   if (!projectID || !periodFrom || !periodTo) {
     return req.reject(400, 'Project and invoice period start/end are required.');
   }
-  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;\n  const isRealDate = value => datePattern.test(String(value)) && !Number.isNaN(Date.parse(String(value) + 'T00:00:00Z')) && new Date(String(value) + 'T00:00:00Z').toISOString().slice(0, 10) === String(value);\n  if (!isRealDate(periodFrom) || !isRealDate(periodTo)) {\n    return req.reject(400, 'Invoice period dates must be real calendar dates in YYYY-MM-DD format.');\n  }\n  if (periodTo < periodFrom) {
+  const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  const isRealDate = value => datePattern.test(String(value)) && !Number.isNaN(Date.parse(String(value) + 'T00:00:00Z')) && new Date(String(value) + 'T00:00:00Z').toISOString().slice(0, 10) === String(value);
+  if (!isRealDate(periodFrom) || !isRealDate(periodTo)) {
+    return req.reject(400, 'Invoice period dates must be real calendar dates in YYYY-MM-DD format.');
+  }
+  if (periodTo < periodFrom) {
     return req.reject(400, 'Invoice period end must be on or after its start.');
   }
 
@@ -32,7 +37,11 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
 
   const budget = await tx.run(cds.ql.SELECT.one.from(Budgets).where({ project_ID: projectID }));
   if (!budget) return req.reject(400, 'Project has no budget and billing rate configured.');
-  const configuredRate = Number(budget.billing_rate_hr);\n  if (!Number.isFinite(configuredRate) || configuredRate < 0) return req.reject(400, 'The project billing rate must be a valid non-negative number.');\n  if (!budget.currency_code || !/^[A-Z]{3}$/.test(budget.currency_code)) {\n    return req.reject(400, 'Project budget must have a valid three-letter currency code.');\n  }
+  const configuredRate = Number(budget.billing_rate_hr);
+  if (!Number.isFinite(configuredRate) || configuredRate < 0) return req.reject(400, 'The project billing rate must be a valid non-negative number.');
+  if (!budget.currency_code || !/^[A-Z]{3}$/.test(budget.currency_code)) {
+    return req.reject(400, 'Project budget must have a valid three-letter currency code.');
+  }
 
   const approvedSheets = await tx.run(cds.ql.SELECT.from(Timesheets).where({
     project_ID: projectID,
