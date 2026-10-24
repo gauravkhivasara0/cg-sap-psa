@@ -28,14 +28,14 @@ Baseline: Enterprise PSA FRD and presentation
 
 ## Latest service-logic increment (source changes only)
 
-- Updated `srv/psa-services.js` so budget consumption and task official actual hours are recalculated from Approved timesheet entries only.
+- The approved-only budget consumption and task actual-hour recalculation logic is now registered from `srv/projects/handlers.js`; the related timesheet validation and workflow actions live in `srv/timesheets/handlers.js`.
 - Applied accepted budget status bands: below 75% Within Budget, 75% to below 90% Warning, 90% to below 100% At Risk, and 100% or above Breached.
 - Strengthened timesheet-entry validation for hour limits and quarter-hour increments, week boundaries, inactive employees, completed tasks, project/task consistency, duplicate task/date entries, and editable Draft/Rejected timesheet status.
 - These source changes have not been validated by a CDS build, tests, or runtime checks. No tests, builds, or runtime checks were run for this increment. No tests, builds, or runtime checks were run for this increment. The current handlers still need additional work for secure employee/manager identity mapping, row-level authorization, transactional notification/email delivery, threshold-crossing alerts, and complete invoice line/source-link generation.
 
 ## Latest billing increment (source changes only)
 
-- Added `srv/lib/billing/generate-time-and-material-invoice.js` for T&M draft generation and `srv/lib/billing/invoice-lifecycle.js` for invoice issue/payment handlers. `srv/psa-services.js` now wires those modules into the CAP actions. This is a gradual domain extraction; unrelated handlers remain in the main service file.
+- Moved billing logic into `srv/billing/`: `generate-time-and-material-invoice.js`, `invoice-lifecycle.js`, and `handlers.js`. Extracted project/budget handlers to `srv/projects/handlers.js` and timesheet handlers to `srv/timesheets/handlers.js`. `srv/psa-services.js` is now a small registrar that shares the audit helper and delegates registration to domain modules.
 - The current T&M draft-invoice path selects entries by actual work date within the requested period, includes Approved billable entries only, creates one invoice line per source entry, and records `InvoiceSourceLinks` to support traceability and duplicate-billing checks.
 - It records client/project name snapshots on draft creation and computes line/subtotal totals with decimal rounding to two places. The generator now validates real calendar dates, a finite non-negative billing rate, and a three-letter currency code before creating a draft.
 - Invoice issue now requires at least one line, validates currency and line totals, records issue/due dates (accepted 30-calendar-day MVP default, marked TODO(CONFIG) for Finance confirmation), and sets the issued-snapshot flag. Payment marking validates a real YYYY-MM-DD payment date. Direct updates to issued invoice financial fields and invoice-line create/update/delete operations are guarded.
@@ -47,12 +47,23 @@ Baseline: Enterprise PSA FRD and presentation
 
 ## Source folder conventions
 
+### Current domain layout
+
+- `srv/psa-services.js`: thin CAP service registrar; currently about 1.5 KB instead of a single large implementation file.
+- `srv/psa-services.cds`: OData contracts remain separate from implementation.
+- `srv/billing/`: billing handlers, invoice generation, and invoice lifecycle.
+- `srv/timesheets/`: time-entry validation and submit/approve/reject handlers.
+- `srv/projects/`: project, task, milestone, budget validation and budget recalculation.
+- This is a gradual extraction. Keep modules simple and move one domain at a time; do not introduce generic repository layers without a concrete need.
+
+
+
 - `db/`: CDS persistence model and data definitions.
 - `srv/`: CAP service contracts and service handlers.
-- `srv/lib/<domain>/`: business logic grouped by domain (for example, `srv/lib/billing/` for invoice-generation rules); keep service registration thin.
+- `srv/<domain>/`: business logic grouped by domain (for example, `srv/billing/`, `srv/timesheets/`, and `srv/projects/`); keep service registration thin.
 - `app/<app-name>/`: Fiori Elements application files and annotations.
 - `docs/`: FRD traceability, architecture, entity mapping, open decisions, and implementation status.
-- Add future domain logic to a named `srv/lib/<domain>/` folder rather than creating a large catch-all handler or putting backend logic under `app/`.
+- Add future domain logic to a named `srv/<domain>/` folder rather than creating a large catch-all handler or putting backend logic under `app/`.
 
 ## Documentation updated
 

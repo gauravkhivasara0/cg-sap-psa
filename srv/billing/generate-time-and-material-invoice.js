@@ -4,7 +4,7 @@ const cds = require('@sap/cds');
  * Generate a draft T&M invoice and preserve a source link for every billed
  * approved billable timesheet entry.
  *
- * Kept under srv/lib/billing so invoice rules stay separate from the CAP
+ * Kept under srv/billing so invoice rules stay separate from the CAP
  * service registration and can be extended for Fixed/Retainer billing.
  */
 module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entities, audit }) {

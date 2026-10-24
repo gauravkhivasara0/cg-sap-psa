@@ -37,7 +37,14 @@
 8. Audit must capture actor, timestamp and old/new values while avoiding secrets and controlling access.
 9. MTA modules, HANA deployer, XSUAA, destinations and HTML5 content require confirmation of service plans and spaces.
 
-## Accepted code organization\n\n- Backend logic is organized by business domain under `srv/lib/<domain>/`, with simple modules and gradual migration one domain at a time.\n- CAP contracts remain in `srv/psa-services.cds`; the main handler wires modules together while domain-specific rules move out incrementally.\n- Fiori apps remain separate under `app/`; implementation priority is backend first.\n- Billing is the current extraction target. See `docs/billing-domain.md` for current module ownership and remaining finance decisions.\n\n## Recommended order
+## Accepted code organization
+
+- Backend logic is organized by business domain directly under `srv/<domain>/` (for example, `srv/billing/`, `srv/timesheets/`, and `srv/projects/`), with simple modules and gradual migration one domain at a time. A separate `srv/lib/` layer is not required.
+- CAP contracts remain in `srv/psa-services.cds`; the main handler wires modules together while domain-specific rules move out incrementally.
+- Fiori apps remain separate under `app/`; implementation priority is backend first.
+- Billing is the current extraction target. See `docs/billing-domain.md` for current module ownership and remaining finance decisions.
+
+## Recommended order
 
 1. Requirements mapping and business decisions.
 2. Refine CDS entities, enums/code lists, uniqueness and relationships.
