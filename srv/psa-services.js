@@ -60,7 +60,12 @@ module.exports = cds.service.impl(async function () {
 
   this.before(['CREATE', 'UPDATE', 'DELETE'], 'InvoiceLines', async req => {
     const tx = cds.tx(req);
-    const invoiceID = req.data?.invoice_ID || req.data?.invoice?.ID || req.params?.[0]?.invoice_ID;
+    let invoiceID = req.data?.invoice_ID || req.data?.invoice?.ID || req.params?.[0]?.invoice_ID;
+    const lineID = req.data?.ID || req.params?.[0]?.ID;
+    if (!invoiceID && lineID) {
+      const currentLine = await tx.run(SELECT.one.from(InvoiceLines).where({ ID: lineID }));
+      invoiceID = currentLine?.invoice_ID;
+    }
     if (!invoiceID) return;
     const invoice = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
     if (invoice?.immutable_on_issue) req.error(409, 'Lines belonging to an issued invoice cannot be changed.');
