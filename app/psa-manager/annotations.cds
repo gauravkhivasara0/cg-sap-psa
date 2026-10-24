@@ -1,4 +1,4 @@
-using { ProjectService } from '../../srv/psa-services';
+using { ProjectService, BillingService } from '../../srv/psa-services';
 
 annotate ProjectService.Projects with @(
   UI.HeaderInfo: {
@@ -52,7 +52,7 @@ annotate ProjectService.Timesheets with @(
   ]
 );
 
-annotate ProjectService.Invoices with @(
+annotate BillingService.Invoices with @(
   UI.LineItem: [
     { Value: invoice_number, Label: 'Invoice Number' },
     { Value: project.project_name, Label: 'Project' },
