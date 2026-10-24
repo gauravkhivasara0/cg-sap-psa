@@ -43,6 +43,28 @@ module.exports = cds.service.impl(async function () {
     if (d.status && !['To Do', 'In Progress', 'Done', 'Blocked'].includes(d.status)) req.error(400, 'Invalid task status.');
   });
 
+  // Prevent direct edits to issued financial facts; payment updates use a dedicated action.
+  this.before('UPDATE', 'Invoices', async req => {
+    const tx = cds.tx(req);
+    const invoiceID = req.data.ID || req.params?.[0]?.ID;
+    if (!invoiceID) return;
+    const current = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
+    if (!current?.immutable_on_issue) return;
+    const frozen = ['client_ID', 'project_ID', 'invoice_number', 'invoice_date', 'due_date',
+      'period_from', 'period_to', 'billable_hours', 'subtotal_amt', 'total_amt', 'tax_amt',
+      'tax_rate', 'currency_code', 'client_name_snapshot', 'project_name_snapshot'];
+    if (frozen.some(field => Object.prototype.hasOwnProperty.call(req.data, field))) {
+      req.error(409, 'Issued invoice financial details are immutable.');
+    }
+  });
+
+  this.before(['CREATE', 'UPDATE', 'DELETE'], 'InvoiceLines', async req => {
+    const tx = cds.tx(req);
+    const invoiceID = req.data?.invoice_ID || req.data?.invoice?.ID || req.params?.[0]?.invoice_ID;
+    if (!invoiceID) return;
+    const invoice = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
+    if (invoice?.immutable_on_issue) req.error(409, 'Lines belonging to an issued invoice cannot be changed.');
+  });
   this.before(['CREATE', 'UPDATE'], 'TimesheetEntries', async req => {
     const tx = cds.tx(req);
     const d = req.data;
