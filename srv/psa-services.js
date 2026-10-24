@@ -266,9 +266,33 @@ module.exports = cds.service.impl(async function () {
     const invoice = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
     if (!invoice) return req.reject(404, 'Invoice not found.');
     if (invoice.payment_status !== 'Draft') return req.reject(409, 'Only Draft invoices can be issued.');
-    await tx.run(UPDATE(Invoices).set({ payment_status: 'Issued', issued_at: new Date().toISOString() }).where({ ID: invoiceID }));
-    await audit(req, 'Invoices', invoiceID, 'ISSUE', { payment_status: 'Draft' }, { payment_status: 'Issued' });
-    return { ID: invoiceID, payment_status: 'Issued' };
+    const lines = await tx.run(SELECT.from(InvoiceLines).where({ invoice_ID: invoiceID }));
+    if (!lines.length) return req.reject(400, 'An invoice must have at least one line before it can be issued.');
+
+    // TODO(CONFIG): confirm the default due-date term with Finance before production.
+    // Accepted MVP default is 30 calendar days after issue.
+    const issuedAt = new Date();
+    const dueDate = new Date(issuedAt);
+    dueDate.setUTCDate(dueDate.getUTCDate() + 30);
+    const issuedDate = issuedAt.toISOString().slice(0, 10);
+    const dueDateString = dueDate.toISOString().slice(0, 10);
+
+    await tx.run(UPDATE(Invoices).set({
+      payment_status: 'Issued',
+      invoice_date: invoice.invoice_date || issuedDate,
+      due_date: dueDateString,
+      issued_at: issuedAt.toISOString(),
+      immutable_on_issue: true
+    }).where({ ID: invoiceID }));
+
+    await audit(req, 'Invoices', invoiceID, 'ISSUE', {
+      payment_status: 'Draft', total_amt: invoice.total_amt,
+      tax_amt: invoice.tax_amt, currency_code: invoice.currency_code
+    }, {
+      payment_status: 'Issued', issued_at: issuedAt.toISOString(),
+      due_date: dueDateString, immutable_on_issue: true
+    });
+    return { ID: invoiceID, payment_status: 'Issued', due_date: dueDateString };
   });
 
   this.on('markInvoicePaid', 'BillingService', async req => {
