@@ -48,7 +48,6 @@ service BillingService {
   action generateInvoice(projectID: UUID, periodFrom: Date, periodTo: Date) returns UUID;
   action issueInvoice(invoiceID: UUID);
   action markInvoicePaid(invoiceID: UUID, paymentDate: Date);
-  action cancelInvoice(invoiceID: UUID, reason: String(255));
   entity Clients as projection on db.Clients;
   @readonly entity Projects as projection on db.Projects;
   @readonly entity Timesheets as projection on db.Timesheets;
