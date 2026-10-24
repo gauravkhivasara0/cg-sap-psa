@@ -49,7 +49,7 @@ module.exports = {
 
   async markInvoicePaid({ req, tx, Invoices, audit }) {
     const { invoiceID, paymentDate } = req.data;
-    if (!paymentDate || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(paymentDate)) || Number.isNaN(Date.parse(String(paymentDate) + 'T00:00:00Z'))) {
+    if (!paymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(String(paymentDate)) || Number.isNaN(Date.parse(String(paymentDate) + 'T00:00:00Z'))) {
       return req.reject(400, 'A valid payment date in YYYY-MM-DD format is required.');
     }
     const txDate = new Date(String(paymentDate) + 'T00:00:00Z');
