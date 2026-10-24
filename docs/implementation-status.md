@@ -4,41 +4,57 @@ Repository: cg-sap-psa
 Working branch: feature/frd-first-cap-foundation  
 Baseline: Enterprise PSA FRD and presentation
 
-## Completed in this increment (source/documentation only)
+## Accepted MVP decisions
 
-- Added docs/traceability-matrix.md mapping FR-001 through FR-012 and NFR-001 through NFR-006 to current evidence and gaps.
-- Added docs/architecture-assessment.md covering target architecture, repository evidence, risks and implementation order.
-- Updated docs/entity-mapping.md with beginner-friendly entity relationships and recommended MVP rules.
-- Updated docs/open-decisions.md to distinguish MVP defaults from items requiring trainer/business/BTP confirmation.
-- Corrected literal newline escape sequences in srv/psa-services.cds so action declarations occupy separate lines.
-- Earlier foundation artifacts remain: db/schema.cds, five CAP service declarations, initial handler file, XSUAA role templates and starter Fiori annotations.
-
-## Current MVP decisions
-
-- Mock-first integrations: HR, finance, document storage, tracker and email/notification delivery are replaceable mock adapters until real systems are confirmed.
+- One Employees entity for each person; manager capability represented by `isManager` plus authorization roles and a reporting-manager relationship as appropriate. Do not keep duplicate Manager person records.
 - Task actual hours and budget consumption use Approved timesheet entries only; budget consumption uses approved billable hours × applicable rate.
-- Budget bands: below 75% Within Budget; 75% to below 90% Warning; 90% to below 100% At Risk; 100% or above Breached. Task burn is separate: 80% alert and >=100% stronger alert.
-- Billing defaults: T&M uses approved billable hours × rate; Fixed uses configured eligible milestone fees; Retainer uses configured period fees. No double-billing hourly entries under fixed/retainer charges.
+- Budget thresholds are configurable and default to the user's accepted values: below 75% Within Budget/no alert; 75% to below 90% Warning; 90% to below 100% At Risk; 100% or above Breached. Task burn is separate: 80% alert and >=100% stronger alert.
+- Billing defaults: T&M uses approved billable hours × rate; Fixed uses configured eligible milestone fees; Retainer uses configured period fees. Do not double-bill hourly entries under fixed/retainer charges.
 - Money defaults: one currency per project/invoice, no FX in MVP, decimal amounts with two displayed decimal places, configurable tax with no invented rate.
-- Identity design target: one canonical Employee/person record; manager permissions are roles/relationships, not a duplicate person. Production identity claims require trainer/BTP confirmation.
-- Invoice source traceability is required in the model; invoice lines must link to approved time entries or to the fixed-fee milestone/contract item they represent.
+- Invoice headers, lines, amounts, lifecycle, payments and source references are stored in the database. Generate invoice PDFs on demand; preserve immutable issued invoice values so regenerated PDFs do not change historical financial facts.
+- Invoice source traceability is required: T&M lines link to approved entries; fixed-fee lines link to eligible milestones/contract items.
+- HR, finance and tracker integrations start with mock adapters/contracts that can be replaced. **Email is real from the start, not mocked**, using an approved SMTP relay/API or SAP Alert Notification service where appropriate and available.
+- In-app notifications are persisted. Budget thresholds are configurable and seeded with 75/90/100; task burn alerts are 80/100.
+- Use FRD BTP services where available; ask for subaccount/service configuration when needed. Do not invent service plans, endpoints or credentials.
 - Soft-delete/inactivation is preferred for referenced master data; audit is append-only until a retention policy is confirmed.
 - CI/CD implementation is deferred until the trainer covers SAP Continuous Integration and Delivery. No GitHub workflows.
+
+## Documentation updated
+
+- `docs/traceability-matrix.md`: maps FR-001 through FR-012 and NFR-001 through NFR-006 to evidence and gaps.
+- `docs/architecture-assessment.md`: target architecture, repository evidence, risks and implementation order.
+- `docs/entity-mapping.md`: entity relationships and beginner-friendly model decisions.
+- `docs/open-decisions.md`: accepted MVP defaults, email provider recommendations and confirmations required.
 
 ## Phase status
 
 | Phase | Status | Notes |
 |---|---|---|
-| 1. Requirements and design | Completed as a baseline; ongoing updates expected | Traceability, architecture, entity mapping and decision log documented |
-| 2. CAP data model | In progress | Need to implement/refine enums, uniqueness, one-budget rule, canonical person model, invoice-source mapping, notifications and monetary fields |
-| 3. CAP services and business logic | In progress / not verified | Initial handlers exist; authorization, transactions, complete roll-ups, alerts, billing and audit need implementation |
+| 1. Requirements and design | Baseline complete; updates ongoing | Traceability, architecture, entity mapping and decision log documented |
+| 2. CAP data model | In progress | Implement/refine enums, uniqueness, single Employees model, invoice-source mapping, notifications and monetary fields |
+| 3. CAP services and business logic | In progress / not verified | Initial handlers exist; authorization, transactions, roll-ups, alerts, real email, billing and audit need implementation |
 | 4. Fiori Elements screens | Not started as complete apps | Starter annotations only; five real screens and manifests/navigation are missing |
-| 5. Integrations and deployment | Not started | Mock adapters/contracts first; MTA and BTP bindings later when landscape is known |
+| 5. Integrations and deployment | Not started | Mock HR/finance/tracker adapters first; real email provider configuration required; MTA and BTP bindings when landscape is known |
 | 6. Testing and acceptance | On hold for consultation | No tests, builds or runtime checks have been created or run |
 
-## Remaining decisions requiring trainer/business confirmation
+## Email configuration needed before implementation
 
-See docs/open-decisions.md. Highest priority before production: final budget status boundary (80% vs 90%), actual identity-provider claims and roles, invoice numbering/payment/cancellation/tax rules, audit retention, and available BTP service plans.
+Please obtain from the trainer/BTP administrator or approved IT team:
+- Whether SAP Alert Notification service is entitled/configured in the target subaccount.
+- Whether business emails should use that service, a corporate SMTP relay, or an approved transactional email API.
+- Sender email address/domain, SMTP host/port and auth method or API endpoint, test recipient(s), and how credentials will be provided securely.
+- Whether email should be sent for timesheet submit/approval/rejection, threshold crossings, invoice issue/payment/overdue, and which recipient rules apply.
+
+Do not commit secrets. If provider configuration is not available, do not silently replace real email with a mock sender; request the configuration while continuing independent work.
+
+## Remaining confirmations before production
+
+- Identity-provider claims, roles and row-level access.
+- Approved email provider and service configuration.
+- Invoice numbering/payment/cancellation/credit-note and tax rules.
+- Audit retention, privacy and deletion policies.
+- Available BTP service plans and CI/CD approach.
+- Whether policy requires exact issued PDF archival.
 
 ## Constraints
 
