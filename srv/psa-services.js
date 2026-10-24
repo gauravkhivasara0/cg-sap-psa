@@ -1,7 +1,8 @@
 const cds = require('@sap/cds');
+const generateTimeAndMaterialInvoice = require('./lib/billing/generate-time-and-material-invoice');
 
 module.exports = cds.service.impl(async function () {
-  const { Projects, Budgets, Milestones, Tasks, Timesheets, TimesheetEntries, Invoices, AuditLog } = cds.entities('psa');
+  const { Projects, Budgets, Clients, Milestones, Tasks, Timesheets, TimesheetEntries, Invoices, InvoiceLines, InvoiceSourceLinks, AuditLog } = cds.entities('psa');
 
   const audit = async (req, entityName, recordID, action, oldValues, newValues) => {
     const tx = cds.tx(req);
@@ -42,20 +43,95 @@ module.exports = cds.service.impl(async function () {
     if (d.status && !['To Do', 'In Progress', 'Done', 'Blocked'].includes(d.status)) req.error(400, 'Invalid task status.');
   });
 
+  // Prevent direct edits to issued financial facts; payment updates use a dedicated action.
+  this.before('UPDATE', 'Invoices', async req => {
+    const tx = cds.tx(req);
+    const invoiceID = req.data.ID || req.params?.[0]?.ID;
+    if (!invoiceID) return;
+    const current = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
+    if (!current?.immutable_on_issue) return;
+    const frozen = ['client_ID', 'project_ID', 'invoice_number', 'invoice_date', 'due_date',
+      'period_from', 'period_to', 'billable_hours', 'subtotal_amt', 'total_amt', 'tax_amt',
+      'tax_rate', 'currency_code', 'client_name_snapshot', 'project_name_snapshot'];
+    if (frozen.some(field => Object.prototype.hasOwnProperty.call(req.data, field))) {
+      req.error(409, 'Issued invoice financial details are immutable.');
+    }
+  });
+
+  this.before(['CREATE', 'UPDATE', 'DELETE'], 'InvoiceLines', async req => {
+    const tx = cds.tx(req);
+    let invoiceID = req.data?.invoice_ID || req.data?.invoice?.ID || req.params?.[0]?.invoice_ID;
+    const lineID = req.data?.ID || req.params?.[0]?.ID;
+    if (!invoiceID && lineID) {
+      const currentLine = await tx.run(SELECT.one.from(InvoiceLines).where({ ID: lineID }));
+      invoiceID = currentLine?.invoice_ID;
+    }
+    if (!invoiceID) return;
+    const invoice = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
+    if (invoice?.immutable_on_issue) req.error(409, 'Lines belonging to an issued invoice cannot be changed.');
+  });
   this.before(['CREATE', 'UPDATE'], 'TimesheetEntries', async req => {
+    const tx = cds.tx(req);
     const d = req.data;
-    if (d.hours !== undefined && (Number(d.hours) < 0.25 || Number(d.hours) > 24)) req.error(400, 'Entry hours must be between 0.25 and 24.');
-    if (d.hours !== undefined && Math.round(Number(d.hours) * 4) !== Number(d.hours) * 4) req.error(400, 'Entry hours must use 0.25-hour increments.');
-    if (d.work_date && d.timesheet_ID) {
-      const sheet = await SELECT.one.from(Timesheets).where({ ID: d.timesheet_ID });
-      if (sheet && (d.work_date < sheet.week_start_date || d.work_date > sheet.week_end_date)) {
+    const entryID = d.ID || req.params?.[0]?.ID;
+    const existing = entryID
+      ? await tx.run(SELECT.one.from(TimesheetEntries).where({ ID: entryID }))
+      : null;
+    const values = { ...(existing || {}), ...d };
+    const timesheetID = values.timesheet_ID;
+    const taskID = values.task_ID;
+
+    if (values.hours !== undefined &&
+        (Number(values.hours) < 0.25 || Number(values.hours) > 24)) {
+      req.error(400, 'Entry hours must be between 0.25 and 24.');
+    }
+    if (values.hours !== undefined &&
+        Math.round(Number(values.hours) * 4) !== Number(values.hours) * 4) {
+      req.error(400, 'Entry hours must use 0.25-hour increments.');
+    }
+
+    const sheet = timesheetID
+      ? await tx.run(SELECT.one.from(Timesheets).where({ ID: timesheetID }))
+      : null;
+    if (!sheet && timesheetID) req.error(400, 'The selected timesheet does not exist.');
+    if (sheet) {
+      if (!['Draft', 'Rejected'].includes(sheet.status)) {
+        req.error(409, 'Only Draft or Rejected timesheets can be edited.');
+      }
+      if (values.work_date &&
+          (values.work_date < sheet.week_start_date || values.work_date > sheet.week_end_date)) {
         req.error(400, 'Work date must fall within the timesheet week.');
       }
-      if (sheet && sheet.status !== 'Draft') req.error(409, 'Only Draft timesheets can be edited.');
+
+      const employee = await tx.run(SELECT.one.from(cds.entities('psa').Employees)
+        .where({ ID: sheet.employee_ID }));
+      if (employee && !employee.is_active) {
+        req.error(409, 'Inactive employees cannot record or edit time.');
+      }
     }
-    if (d.task_ID) {
-      const task = await SELECT.one.from(Tasks).where({ ID: d.task_ID });
-      if (task?.status === 'Done') req.error(400, 'Time cannot be recorded against a completed task.');
+
+    const task = taskID
+      ? await tx.run(SELECT.one.from(Tasks).where({ ID: taskID }))
+      : null;
+    if (!task && taskID) req.error(400, 'The selected task does not exist.');
+    if (task?.status === 'Done') {
+      req.error(400, 'Time cannot be recorded against a completed task.');
+    }
+    if (sheet && task && sheet.project_ID !== task.project_ID) {
+      req.error(400, 'The task must belong to the same project as the timesheet.');
+    }
+
+    // Prevent duplicate entries for the same task and work date. Exclude the
+    // current row during updates; rejected timesheets remain editable for correction.
+    if (taskID && values.work_date) {
+      const sameDayEntries = await tx.run(SELECT.from(TimesheetEntries).where({
+        task_ID: taskID,
+        work_date: values.work_date
+      }));
+      const duplicate = sameDayEntries.some(entry => entry.ID !== entryID);
+      if (duplicate) {
+        req.error(409, 'A time entry already exists for this task and work date.');
+      }
     }
   });
 
@@ -118,50 +194,97 @@ module.exports = cds.service.impl(async function () {
     const tx = cds.tx(req);
     const budget = await tx.run(SELECT.one.from(Budgets).where({ ID: budgetID }));
     if (!budget) return req.reject(404, 'Budget not found.');
-    // Calculate from billable entries on submitted/approved sheets belonging to this project.
-    const entries = await tx.run(SELECT.from(TimesheetEntries).where({ is_billable: true }));
-    let consumed = 0;
-    for (const entry of entries) {
-      const sheet = await tx.run(SELECT.one.from(Timesheets).where({ ID: entry.timesheet_ID }));
-      if (!sheet || !['Submitted', 'Approved', 'Invoiced'].includes(sheet.status)) continue;
-      if (sheet.project_ID !== budget.project_ID) continue;
-      consumed += Number(entry.hours) * Number(budget.billing_rate_hr);
-    }
+
+    // Official actuals use Approved timesheet entries only. Draft, Submitted and
+    // Rejected entries are intentionally excluded until approval is complete.
+    const projectSheets = await tx.run(SELECT.from(Timesheets).where({
+      project_ID: budget.project_ID,
+      status: 'Approved'
+    }));
+    const sheetIDs = projectSheets.map(sheet => sheet.ID);
+    const approvedEntries = sheetIDs.length
+      ? await tx.run(SELECT.from(TimesheetEntries).where({
+          timesheet_ID: { in: sheetIDs }
+        }))
+      : [];
+
+    const approvedBillableEntries = approvedEntries.filter(entry => entry.is_billable);
+    const approvedHours = approvedBillableEntries.reduce(
+      (sum, entry) => sum + Number(entry.hours || 0), 0
+    );
+    const consumed = approvedHours * Number(budget.billing_rate_hr || 0);
     const remaining = Number(budget.budget_amt) - consumed;
-    const pct = Number(budget.budget_amt) > 0 ? consumed / Number(budget.budget_amt) * 100 : 0;
-    const status = pct > 100 ? 'Breached' : pct >= 80 ? 'At Risk' : 'Within Budget';
-    await tx.run(UPDATE(Budgets).set({ consumed_amt: consumed, remaining_amt: remaining, budget_status: status }).where({ ID: budgetID }));
-    await audit(req, 'Budgets', budgetID, 'RECALCULATE', { consumed_amt: budget.consumed_amt }, { consumed_amt: consumed, remaining_amt: remaining, budget_status: status });
-    return { ID: budgetID, consumed_amt: consumed, remaining_amt: remaining, budget_status: status };
+    const pct = Number(budget.budget_amt) > 0
+      ? consumed / Number(budget.budget_amt) * 100
+      : 0;
+
+    // Accepted defaults: <75% Within Budget; 75-<90% Warning;
+    // 90-<100% At Risk; >=100% Breached.
+    const status = pct >= 100
+      ? 'Breached'
+      : pct >= 90
+        ? 'At Risk'
+        : pct >= 75
+          ? 'Warning'
+          : 'Within Budget';
+
+    await tx.run(UPDATE(Budgets).set({
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status
+    }).where({ ID: budgetID }));
+
+    // Keep task actual hours consistent with the same approved-only rule.
+    const projectTasks = await tx.run(SELECT.from(Tasks).where({
+      project_ID: budget.project_ID
+    }));
+    const hoursByTask = new Map();
+    for (const entry of approvedEntries) {
+      const taskID = entry.task_ID;
+      hoursByTask.set(taskID, (hoursByTask.get(taskID) || 0) + Number(entry.hours || 0));
+    }
+    for (const task of projectTasks) {
+      await tx.run(UPDATE(Tasks).set({
+        actual_hours: hoursByTask.get(task.ID) || 0
+      }).where({ ID: task.ID }));
+    }
+
+    await audit(req, 'Budgets', budgetID, 'RECALCULATE', {
+      consumed_amt: budget.consumed_amt,
+      remaining_amt: budget.remaining_amt,
+      budget_status: budget.budget_status
+    }, {
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status,
+      approved_billable_hours: approvedHours
+    });
+
+    return {
+      ID: budgetID,
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status
+    };
   });
 
   this.on('generateInvoice', 'BillingService', async req => {
-    const { projectID, periodFrom, periodTo } = req.data;
-    if (periodTo < periodFrom) return req.reject(400, 'Invoice period end must be on or after its start.');
     const tx = cds.tx(req);
-    const project = await tx.run(SELECT.one.from(Projects).where({ ID: projectID }));
-    if (!project) return req.reject(404, 'Project not found.');
-    const sheets = await tx.run(SELECT.from(Timesheets).where({
-      project_ID: projectID, status: 'Approved',
-      week_start_date: { between: [periodFrom, periodTo] }
-    }));
-    if (!sheets.length) return req.reject(400, 'No approved timesheets found for the selected period.');
-    const sheetIDs = sheets.map(s => s.ID);
-    const entries = await tx.run(SELECT.from(TimesheetEntries).where({ timesheet_ID: { in: sheetIDs }, is_billable: true }));
-    if (!entries.length) return req.reject(400, 'No billable entries are available for invoicing.');
-    const hours = entries.reduce((sum, e) => sum + Number(e.hours), 0);
-    const budget = await tx.run(SELECT.one.from(Budgets).where({ project_ID: projectID }));
-    if (!budget) return req.reject(400, 'Project has no budget and billing rate configured.');
-    const subtotal = hours * Number(budget.billing_rate_hr);
-    const invoiceID = cds.utils.uuid();
-    await tx.run(INSERT.into(Invoices).entries({
-      ID: invoiceID, client_ID: project.client_ID, project_ID: projectID,
-      invoice_date: new Date().toISOString().slice(0, 10),
-      billable_hours: hours, total_amt: subtotal, tax_amt: 0,
-      currency_code: budget.currency_code, payment_status: 'Draft'
-    }));
-    await audit(req, 'Invoices', invoiceID, 'GENERATE', null, { projectID, hours, subtotal });
-    return invoiceID;
+    return generateTimeAndMaterialInvoice({
+      req,
+      tx,
+      entities: {
+        Projects,
+        Budgets,
+        Clients,
+        Timesheets,
+        TimesheetEntries,
+        Invoices,
+        InvoiceLines,
+        InvoiceSourceLinks
+      },
+      audit
+    });
   });
 
   this.on('issueInvoice', 'BillingService', async req => {
@@ -170,9 +293,33 @@ module.exports = cds.service.impl(async function () {
     const invoice = await tx.run(SELECT.one.from(Invoices).where({ ID: invoiceID }));
     if (!invoice) return req.reject(404, 'Invoice not found.');
     if (invoice.payment_status !== 'Draft') return req.reject(409, 'Only Draft invoices can be issued.');
-    await tx.run(UPDATE(Invoices).set({ payment_status: 'Issued', issued_at: new Date().toISOString() }).where({ ID: invoiceID }));
-    await audit(req, 'Invoices', invoiceID, 'ISSUE', { payment_status: 'Draft' }, { payment_status: 'Issued' });
-    return { ID: invoiceID, payment_status: 'Issued' };
+    const lines = await tx.run(SELECT.from(InvoiceLines).where({ invoice_ID: invoiceID }));
+    if (!lines.length) return req.reject(400, 'An invoice must have at least one line before it can be issued.');
+
+    // TODO(CONFIG): confirm the default due-date term with Finance before production.
+    // Accepted MVP default is 30 calendar days after issue.
+    const issuedAt = new Date();
+    const dueDate = new Date(issuedAt);
+    dueDate.setUTCDate(dueDate.getUTCDate() + 30);
+    const issuedDate = issuedAt.toISOString().slice(0, 10);
+    const dueDateString = dueDate.toISOString().slice(0, 10);
+
+    await tx.run(UPDATE(Invoices).set({
+      payment_status: 'Issued',
+      invoice_date: invoice.invoice_date || issuedDate,
+      due_date: dueDateString,
+      issued_at: issuedAt.toISOString(),
+      immutable_on_issue: true
+    }).where({ ID: invoiceID }));
+
+    await audit(req, 'Invoices', invoiceID, 'ISSUE', {
+      payment_status: 'Draft', total_amt: invoice.total_amt,
+      tax_amt: invoice.tax_amt, currency_code: invoice.currency_code
+    }, {
+      payment_status: 'Issued', issued_at: issuedAt.toISOString(),
+      due_date: dueDateString, immutable_on_issue: true
+    });
+    return { ID: invoiceID, payment_status: 'Issued', due_date: dueDateString };
   });
 
   this.on('markInvoicePaid', 'BillingService', async req => {
