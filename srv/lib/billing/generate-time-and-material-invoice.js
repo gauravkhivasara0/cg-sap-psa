@@ -8,7 +8,7 @@ const cds = require('@sap/cds');
  * service registration and can be extended for Fixed/Retainer billing.
  */
 module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entities, audit }) {
-  const { Projects, Budgets, Timesheets, TimesheetEntries, Invoices, InvoiceLines, InvoiceSourceLinks } = entities;
+  const { Projects, Budgets, Clients, Timesheets, TimesheetEntries, Invoices, InvoiceLines, InvoiceSourceLinks } = entities;
   const { projectID, periodFrom, periodTo } = req.data;
 
   if (!projectID || !periodFrom || !periodTo) {
@@ -26,6 +26,9 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
   if (project.billing_type !== 'TM') {
     return req.reject(400, 'Invoice generation currently supports T&M projects only. Fixed and Retainer billing will be implemented separately.');
   }
+
+  const client = await tx.run(cds.ql.SELECT.one.from(Clients).where({ ID: project.client_ID }));
+  if (!client) return req.reject(400, 'The project client record could not be found.');
 
   const budget = await tx.run(cds.ql.SELECT.one.from(Budgets).where({ project_ID: projectID }));
   if (!budget) return req.reject(400, 'Project has no budget and billing rate configured.');
@@ -99,7 +102,7 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
     tax_rate: 0, // TODO(CONFIG): source this from approved tax configuration.
     currency_code: budget.currency_code,
     payment_status: 'Draft',
-    client_name_snapshot: project.client_name || null,
+    client_name_snapshot: client.client_name,
     project_name_snapshot: project.project_name,
     immutable_on_issue: false
   }));
