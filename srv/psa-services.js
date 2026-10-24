@@ -1,7 +1,8 @@
 const cds = require('@sap/cds');
+const generateTimeAndMaterialInvoice = require('./lib/billing/generate-time-and-material-invoice');
 
 module.exports = cds.service.impl(async function () {
-  const { Projects, Budgets, Milestones, Tasks, Timesheets, TimesheetEntries, Invoices, AuditLog } = cds.entities('psa');
+  const { Projects, Budgets, Clients, Milestones, Tasks, Timesheets, TimesheetEntries, Invoices, InvoiceLines, InvoiceSourceLinks, AuditLog } = cds.entities('psa');
 
   const audit = async (req, entityName, recordID, action, oldValues, newValues) => {
     const tx = cds.tx(req);
@@ -241,32 +242,22 @@ module.exports = cds.service.impl(async function () {
   });
 
   this.on('generateInvoice', 'BillingService', async req => {
-    const { projectID, periodFrom, periodTo } = req.data;
-    if (periodTo < periodFrom) return req.reject(400, 'Invoice period end must be on or after its start.');
     const tx = cds.tx(req);
-    const project = await tx.run(SELECT.one.from(Projects).where({ ID: projectID }));
-    if (!project) return req.reject(404, 'Project not found.');
-    const sheets = await tx.run(SELECT.from(Timesheets).where({
-      project_ID: projectID, status: 'Approved',
-      week_start_date: { between: [periodFrom, periodTo] }
-    }));
-    if (!sheets.length) return req.reject(400, 'No approved timesheets found for the selected period.');
-    const sheetIDs = sheets.map(s => s.ID);
-    const entries = await tx.run(SELECT.from(TimesheetEntries).where({ timesheet_ID: { in: sheetIDs }, is_billable: true }));
-    if (!entries.length) return req.reject(400, 'No billable entries are available for invoicing.');
-    const hours = entries.reduce((sum, e) => sum + Number(e.hours), 0);
-    const budget = await tx.run(SELECT.one.from(Budgets).where({ project_ID: projectID }));
-    if (!budget) return req.reject(400, 'Project has no budget and billing rate configured.');
-    const subtotal = hours * Number(budget.billing_rate_hr);
-    const invoiceID = cds.utils.uuid();
-    await tx.run(INSERT.into(Invoices).entries({
-      ID: invoiceID, client_ID: project.client_ID, project_ID: projectID,
-      invoice_date: new Date().toISOString().slice(0, 10),
-      billable_hours: hours, total_amt: subtotal, tax_amt: 0,
-      currency_code: budget.currency_code, payment_status: 'Draft'
-    }));
-    await audit(req, 'Invoices', invoiceID, 'GENERATE', null, { projectID, hours, subtotal });
-    return invoiceID;
+    return generateTimeAndMaterialInvoice({
+      req,
+      tx,
+      entities: {
+        Projects,
+        Budgets,
+        Clients,
+        Timesheets,
+        TimesheetEntries,
+        Invoices,
+        InvoiceLines,
+        InvoiceSourceLinks
+      },
+      audit
+    });
   });
 
   this.on('issueInvoice', 'BillingService', async req => {
