@@ -26,6 +26,13 @@ Baseline: Enterprise PSA FRD and presentation
 - Added TODO(CONFIG) comments where real IdP, HR, email, billing-period, and threshold seed configuration is needed.
 - These changes have **not** been validated by a CDS build or tests. Do not treat them as verified or production-ready.
 
+## Latest service-logic increment (source changes only)
+
+- Updated `srv/psa-services.js` so budget consumption and task official actual hours are recalculated from Approved timesheet entries only.
+- Applied accepted budget status bands: below 75% Within Budget, 75% to below 90% Warning, 90% to below 100% At Risk, and 100% or above Breached.
+- Strengthened timesheet-entry validation for hour limits and quarter-hour increments, week boundaries, inactive employees, completed tasks, project/task consistency, duplicate task/date entries, and editable Draft/Rejected timesheet status.
+- These source changes have not been validated by a CDS build, tests, or runtime checks. The current handlers still need additional work for secure employee/manager identity mapping, row-level authorization, transactional notification/email delivery, threshold-crossing alerts, and complete invoice line/source-link generation.
+
 ## Documentation updated
 
 - `docs/traceability-matrix.md`: maps FR-001 through FR-012 and NFR-001 through NFR-006 to evidence and gaps.
