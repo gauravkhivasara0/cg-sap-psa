@@ -5,12 +5,15 @@ This document describes the billing code as it currently exists on `feature/frd-
 ## Folder ownership
 
 - `srv/psa-services.cds`: OData action and entity contracts.
-- `srv/psa-services.js`: CAP registration, service wiring, and non-billing handlers.
-- `srv/lib/billing/generate-time-and-material-invoice.js`: T&M draft invoice creation and source traceability.
-- `srv/lib/billing/invoice-lifecycle.js`: issue and payment lifecycle handlers.
+- `srv/psa-services.js`: thin CAP service registrar and shared audit helper.
+- `srv/billing/handlers.js`: registers invoice guard and billing action handlers.
+- `srv/timesheets/handlers.js`: registers time-entry validation and timesheet workflow handlers.
+- `srv/projects/handlers.js`: registers project/task/milestone validation and budget recalculation.
+- `srv/billing/generate-time-and-material-invoice.js`: T&M draft invoice creation and source traceability.
+- `srv/billing/invoice-lifecycle.js`: issue and payment lifecycle handlers.
 - `db/schema.cds`: invoice, line, source-link and related persistence entities.
 
-The extraction is deliberately gradual. Keep simple, named modules; do not introduce a generic repository/service framework without a concrete need. Fiori app code stays under `app/` and does not own billing rules.
+The extraction is deliberately gradual. Domain modules now live directly under `srv/`; a separate `lib/` directory is not required. Keep simple, named modules; do not introduce a generic repository/service framework without a concrete need. Fiori app code stays under `app/` and does not own billing rules.
 
 ## Current T&M flow
 
