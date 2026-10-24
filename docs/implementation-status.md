@@ -33,6 +33,26 @@ Baseline: Enterprise PSA FRD and presentation
 - Strengthened timesheet-entry validation for hour limits and quarter-hour increments, week boundaries, inactive employees, completed tasks, project/task consistency, duplicate task/date entries, and editable Draft/Rejected timesheet status.
 - These source changes have not been validated by a CDS build, tests, or runtime checks. The current handlers still need additional work for secure employee/manager identity mapping, row-level authorization, transactional notification/email delivery, threshold-crossing alerts, and complete invoice line/source-link generation.
 
+## Latest billing increment (source changes only)
+
+- Added `srv/lib/billing/generate-time-and-material-invoice.js` so invoice-generation rules live in a dedicated billing module instead of expanding the main CAP service handler.
+- Refactored `srv/psa-services.js` to delegate the `generateInvoice` action to that module.
+- The current T&M draft-invoice path selects entries by actual work date within the requested period, includes Approved billable entries only, creates one invoice line per source entry, and records `InvoiceSourceLinks` to support traceability and duplicate-billing checks.
+- It records client/project name snapshots on draft creation and computes line/subtotal totals with decimal rounding to two places.
+- Fixed-fee and Retainer invoice generation is explicitly rejected for now rather than being incorrectly calculated as hourly billing.
+- Tax remains a blocking business/configuration gap: the current schema has no approved tax-configuration source, so the draft handler marks the provisional zero-tax behavior with TODO(CONFIG). Do not treat this as tax-compliant or issue invoices until the approved tax rules are supplied and wired in.
+- Duplicate-billing protection currently checks existing source links before creating the draft. A database-level uniqueness/concurrency guarantee and invoice cancellation/release behavior still need design.
+- These source changes have not been validated by a CDS build, tests, or runtime checks.
+
+## Source folder conventions
+
+- `db/`: CDS persistence model and data definitions.
+- `srv/`: CAP service contracts and service handlers.
+- `srv/lib/<domain>/`: business logic grouped by domain (for example, `srv/lib/billing/` for invoice-generation rules); keep service registration thin.
+- `app/<app-name>/`: Fiori Elements application files and annotations.
+- `docs/`: FRD traceability, architecture, entity mapping, open decisions, and implementation status.
+- Add future domain logic to a named `srv/lib/<domain>/` folder rather than creating a large catch-all handler or putting backend logic under `app/`.
+
 ## Documentation updated
 
 - `docs/traceability-matrix.md`: maps FR-001 through FR-012 and NFR-001 through NFR-006 to evidence and gaps.
