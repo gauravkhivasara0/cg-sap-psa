@@ -39,6 +39,8 @@ Baseline: Enterprise PSA FRD and presentation
 - Refactored `srv/psa-services.js` to delegate the `generateInvoice` action to that module.
 - The current T&M draft-invoice path selects entries by actual work date within the requested period, includes Approved billable entries only, creates one invoice line per source entry, and records `InvoiceSourceLinks` to support traceability and duplicate-billing checks.
 - It records client/project name snapshots on draft creation and computes line/subtotal totals with decimal rounding to two places.
+- Invoice issue now requires at least one line, records issue/due dates (accepted 30-calendar-day MVP default, marked TODO(CONFIG) for Finance confirmation), and sets the issued-snapshot flag. Direct updates to issued invoice financial fields and invoice-line create/update/delete operations are guarded.
+- A database-backed invoice-number sequence is not implemented yet. Real email on issue and tax-rule configuration also remain outstanding.
 - Fixed-fee and Retainer invoice generation is explicitly rejected for now rather than being incorrectly calculated as hourly billing.
 - Tax remains a blocking business/configuration gap: the current schema has no approved tax-configuration source, so the draft handler marks the provisional zero-tax behavior with TODO(CONFIG). Do not treat this as tax-compliant or issue invoices until the approved tax rules are supplied and wired in.
 - Duplicate-billing protection currently checks existing source links before creating the draft. A database-level uniqueness/concurrency guarantee and invoice cancellation/release behavior still need design.
