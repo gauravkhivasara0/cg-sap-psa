@@ -26,6 +26,7 @@ service EmployeeService {
 @requires: 'ManagerRole'
 service ProjectService {
   entity Projects as projection on db.Projects;
+  @cds.redirection.target: true
   entity Budgets as projection on db.Budgets;
   entity Milestones as projection on db.Milestones;
   entity Tasks as projection on db.Tasks;
@@ -35,7 +36,7 @@ service ProjectService {
   action recalculateBudget(budgetID: UUID);
   function getBurnSummary(projectID: UUID) returns LargeString;
   @readonly entity TimesheetEntries as projection on db.TimesheetEntries;
-  @readonly entity BudgetAlerts as projection on db.Budgets;
+  @readonly @cds.redirection.target: false entity BudgetAlerts as projection on db.Budgets;
   @readonly entity Notifications as projection on db.Notifications;
 }
 
