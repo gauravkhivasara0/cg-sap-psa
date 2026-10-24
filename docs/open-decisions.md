@@ -1,34 +1,63 @@
-# PSA Open-Decision Log
+# PSA Decision Log: MVP Defaults and Remaining Confirmations
 
-These unresolved items come from the FRD and current source draft. Do not silently choose values that affect business outcomes, security or deployment.
+This log separates **recommended MVP defaults** from items that still require trainer, business, security, or BTP landscape confirmation. The defaults are for a learning/prototype implementation, not production approval.
 
-| ID | Decision | Why it matters | Safe interim treatment | Owner / evidence |
-|---|---|---|---|---|
-| DEC-001 | Which HR system is authoritative and what is the employee key? | Sync and identity mapping | Define a contract only; do not assume SuccessFactors is provisioned | HR / landscape inventory |
-| DEC-002 | Which finance system receives issued invoices? | Payload and lifecycle | No live integration claim until confirmed | Finance/architecture |
-| DEC-003 | Which document-management service stores invoice PDFs? | API, permissions and retention | Leave adapter unconfigured | BTP administrator |
-| DEC-004 | Which identity provider attributes supply employeeId, managerId and departmentId? | Row-level access and approver identity | Deny if identity cannot be resolved; never trust user-supplied identity | Security/BTP |
-| DEC-005 | Are Managers also Employees? What is canonical manager ID? | Prevent duplicate person records | Keep separate until confirmed | HR/business |
-| DEC-006 | Which timesheet states count toward task actual hours? How are rejected entries treated? | Task burn correctness | Keep status-aware calculation explicit | Product owner |
-| DEC-007 | Is budget consumption based on submitted or approved billable hours? | Financial reporting | Do not finalize the basis until approved | Finance/product |
-| DEC-008 | How are Fixed and Retainer invoices calculated? | Hourly multiplication only fits some T&M cases | Do not describe draft handler as full billing | Finance/product |
-| DEC-009 | What tax jurisdictions, rates, exemptions and rounding rules apply? | Financial/compliance correctness | No hard-coded tax rate | Finance/tax |
-| DEC-010 | Invoice numbering, due date, cancellation and overdue rules? | Lifecycle and audit | Do not issue real invoices until defined | Finance |
-| DEC-011 | How are invoice lines linked to source time/milestones? | Reconciliation and duplicate-billing prevention | Require durable source mapping before production billing | Finance/product |
-| DEC-012 | How do threshold crossing, recovery and repeat alerts work? | Notification volume and semantics | Keep task burn 80/100 separate from alert defaults 75/90/100 | Product owner |
-| DEC-013 | Alert recipients, channels, retries and escalation? | Reliable notifications | Contract only until confirmed | Operations/business |
-| DEC-014 | Tracker schema, task-ID mapping and duplicate key? | Safe import | Report unmapped rows; do not silently drop them | Tracker owner |
-| DEC-015 | Which BTP service plans exist in DEV/QAS/PROD? | Valid MTA resources/bindings | Do not invent services or credentials | BTP administrator |
-| DEC-016 | Which SAP CI/CD tenant/pipeline is available? | Pipeline without GitHub workflows | Document intent only | DevOps owner |
-| DEC-017 | Audit retention, privacy and deletion rules? | Employee/financial data governance | Restrict audit access; never log secrets | Security/legal |
-| DEC-018 | Budget boundary at exactly 80% and 100%? | Consistent status | Draft interpretation: At Risk >=80%, Breached >100% | Product/finance |
-| DEC-019 | Currency precision and foreign-exchange behavior? | Accurate monetary calculations | Store currency; no FX without rules | Finance |
-| DEC-020 | Are master-data codes case-sensitive for uniqueness? | Duplicate prevention | Normalize only after decision | Master-data owner |
+## Agreed working direction
 
-## Distinct threshold rules from the FRD
+- Build a mock-first PSA MVP; no live external integration is assumed.
+- Keep the current working branch `feature/frd-first-cap-foundation`; do not change `main`.
+- Do not create or run tests, builds, or runtime checks until the developer has been consulted.
+- Keep secrets and real credentials out of source control. Do not use GitHub workflows.
 
-- Task burn: warning at 80% of estimated task hours; error at 100%.
-- Configurable task/project alerts: default thresholds 75%, 90%, 100%, with in-app/email notification once per crossing.
-- Budget status: Within Budget below 80%; At Risk at 80% through 100%; Breached above 100%.
+## Recommended MVP defaults
 
-These rules are related but not interchangeable.
+| ID | Topic | Recommended MVP decision | Still needs confirmation before production |
+|---|---|---|---|
+| DEC-001 | HR source and employee key | Mock HR data. Use a PSA-generated internal UUID for relationships and a separate employee number/external HR ID for future sync. | Actual HR system, external key, sync contract and ownership. |
+| DEC-002 | Finance integration | Mock finance adapter; store invoice data in PSA. | Target finance system, API and posting rules. |
+| DEC-003 | Invoice PDF storage | Mock document-storage adapter for now. PDF generation/storage can be demonstrated locally or through a mock reference; do not claim SAP DIM integration. | Whether SAP Document Information Extraction/Management or another approved repository is available, and retention/access requirements. |
+| DEC-004 | Identity-provider attributes | In mock/development mode, use a controlled server-side demo identity mapping. In production, map trusted identity claims to the PSA employee record; never trust an employee ID supplied by the client. | Exact XSUAA/IAS/IdP claims and mapping, roles, and row-level access configuration. |
+| DEC-005 | Manager/employee relationship | Treat a manager as an employee/person with manager permissions; avoid duplicate person records. Use a self-association such as employee.manager. | Trainer/HR confirmation that this model matches the FRD and expected organizational data. |
+| DEC-006 | Task actual hours | Count Approved timesheet entries only. Draft, Submitted and Rejected entries do not affect official actuals. Show pending submitted hours separately if useful. | Confirm with business/trainer; this is the selected MVP rule. |
+| DEC-007 | Budget consumption | Approved **billable** hours × applicable project/task billing rate. Recalculate after approval/rejection or relevant rate changes. | Confirm whether the FRD expects approved-only hours and which rate takes precedence when rates vary. |
+| DEC-008 | Billing types | T&M = approved billable hours × rate; Fixed = configured fixed fee on eligible milestone; Retainer = configured fee per billing period. Do not bill hours twice under Fixed/Retainer. | Contract-specific variations and what milestone makes a fixed fee billable. |
+| DEC-009 | Tax, rounding and currency | One currency per project/invoice; no FX conversion in MVP. Store monetary values as decimal values, display two decimal places, and use a configurable tax rate. Keep tax demo-configured until confirmed. | Applicable tax jurisdiction, tax codes, exemptions, inclusive/exclusive pricing, and finance-approved rounding rules. |
+| DEC-010 | Invoice number, due date, cancellation, overdue | Generate a unique sequential-looking PSA invoice number using a database-backed counter; due date defaults to 30 days after issue, configurable. Overdue means Issued and unpaid after due date. Allow cancellation of Draft invoices; an Issued invoice should not simply be deleted or silently cancelled. | Required numbering format, credit-note/reversal policy, payment terms and legal rules. |
+| DEC-011 | Invoice-to-source traceability | Store invoice lines and a durable mapping from T&M lines to the exact approved timesheet entries they bill. Fixed-fee lines reference the relevant project/milestone. Prevent a source entry from being billed twice. | Confirm desired invoice line grouping and finance-system reconciliation requirements. |
+| DEC-012 | Threshold crossing and repeat alerts | Budget: below 75% = Within Budget; 75% to <90% = Warning; 90% to <100% = At Risk; >=100% = Breached. Task burn: alert at 80% and stronger alert at >=100% of estimated hours. Record threshold crossings to prevent duplicates; re-arm after recovery below threshold. | Confirm if the trainer expects budget status At Risk to begin at 80% from an earlier FRD statement; the user’s latest preference is 90%. |
+| DEC-013 | Notification channels | Persist in-app notifications. Mock email by recording recipient, subject, body and status; keep a replaceable notification adapter. | Real recipients, email provider, retries, escalation and alert-delivery guarantees. |
+| DEC-014 | Tracker integration | “Tracker” means the external task/time-tracking tool mentioned in the FRD; no vendor is named. Start with a documented CSV import format and sample rows, map external task IDs to PSA tasks, report unmapped rows, and use an import key to ignore duplicates. | Actual tracker/vendor, CSV/API schema, source of truth and duplicate-key contract. |
+| DEC-015 | BTP service plans | Do not define actual service plans or bindings until the training/BTP subaccount landscape is known. Local/mock development should not require live BTP instances. | Available HANA Cloud, XSUAA, Destination, HTML5 repo, Work Zone, document and notification services/plans. |
+| DEC-016 | CI/CD | Defer implementation until the trainer covers SAP Continuous Integration and Delivery. Keep the repository ready for a later pipeline; no GitHub workflows. | Trainer’s preferred pipeline, tenant, credentials and deployment stages. |
+| DEC-017 | Audit retention and deletion | No hard-delete for business records that are referenced by timesheets, invoices or audit history. Deactivate employees and other master data instead. Keep audit records append-only and restrict access. | Legal/business retention period, privacy policy, archival and deletion requirements. Do not hard-code a legal period without approval. |
+| DEC-018 | Budget boundaries | Use the threshold bands in DEC-012 for the MVP: 75%, 90%, and 100%. | Resolve conflict with any FRD wording that says At Risk begins at 80%; record the final trainer decision. |
+| DEC-019 | Foreign exchange | No FX in MVP. Store the currency code on budget/invoice and reject cross-currency calculations unless a conversion rule is later added. | If multi-currency is required: exchange-rate source, date, rate type, and rounding rules. |
+| DEC-020 | Code uniqueness | Treat codes as case-insensitive after trimming whitespace for validation, unless the trainer explicitly requires otherwise. Preserve a display value consistently. | Confirm business rules for client, employee, project and external tracker codes. |
+
+## Plain-language explanations
+
+### Invoice-to-time traceability
+An invoice must be explainable: for example, “this invoice line billed these 12 approved timesheet entries.” This supports reconciliation and prevents the same time entry from being billed twice. Fixed-fee lines should point to the project/milestone or contract item instead of pretending they came from hourly entries.
+
+### Identity-provider attributes
+When a person signs in, the identity provider sends trusted information (claims/attributes) about that account. The app needs a reliable mapping from that signed-in account to the PSA employee record and roles. Exact claim names vary by identity setup, so do not guess them in code before the trainer/BTP configuration is known.
+
+### BTP service instances vs tools
+- **SAP HANA Cloud** is the database service.
+- **SAP Build Work Zone** is an experience/launchpad service for users.
+- **SAP Business Application Studio (BAS)** is a development environment/IDE, not normally a runtime service instance that the deployed app binds to.
+- Other runtime services such as XSUAA, Destination, HTML5 Application Repository, and notification/document services depend on the target landscape and available plans.
+
+## Threshold rules (keep separate)
+
+- **Task burn** is hours used versus estimated task hours: 80% alert; 100% stronger alert.
+- **Budget consumption** is approved billable value versus budget amount: 75% warning; 90% At Risk; 100% Breached.
+- A task can exceed estimated hours without the project budget being breached, and a budget can be at risk even when no individual task has reached 80%.
+
+## Items to confirm with the trainer before production
+
+1. Finalize the 80% vs 90% boundary wording for budget status.
+2. Confirm the single-person Employee/Manager model and the signed-in identity mapping.
+3. Confirm invoice numbering, payment terms, cancellation/credit-note policy, and tax rules.
+4. Confirm retention, privacy and audit policies.
+5. Confirm available BTP services/plans and the intended CI/CD approach.
