@@ -1,0 +1,3 @@
+ID;client_code;client_name;email;phone;address;is_active
+10000000-0000-4000-8000-000000000001;CL-001;Northstar Retail Demo;billing@northstar.example;+1-555-0101;100 Example Street;true
+10000000-0000-4000-8000-000000000002;CL-002;Bluebird Health Demo;ap@bluebird.example;+1-555-0102;200 Sample Avenue;true
