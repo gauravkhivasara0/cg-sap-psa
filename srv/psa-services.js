@@ -118,21 +118,78 @@ module.exports = cds.service.impl(async function () {
     const tx = cds.tx(req);
     const budget = await tx.run(SELECT.one.from(Budgets).where({ ID: budgetID }));
     if (!budget) return req.reject(404, 'Budget not found.');
-    // Calculate from billable entries on submitted/approved sheets belonging to this project.
-    const entries = await tx.run(SELECT.from(TimesheetEntries).where({ is_billable: true }));
-    let consumed = 0;
-    for (const entry of entries) {
-      const sheet = await tx.run(SELECT.one.from(Timesheets).where({ ID: entry.timesheet_ID }));
-      if (!sheet || !['Submitted', 'Approved', 'Invoiced'].includes(sheet.status)) continue;
-      if (sheet.project_ID !== budget.project_ID) continue;
-      consumed += Number(entry.hours) * Number(budget.billing_rate_hr);
-    }
+
+    // Official actuals use Approved timesheet entries only. Draft, Submitted and
+    // Rejected entries are intentionally excluded until approval is complete.
+    const projectSheets = await tx.run(SELECT.from(Timesheets).where({
+      project_ID: budget.project_ID,
+      status: 'Approved'
+    }));
+    const sheetIDs = projectSheets.map(sheet => sheet.ID);
+    const approvedEntries = sheetIDs.length
+      ? await tx.run(SELECT.from(TimesheetEntries).where({
+          timesheet_ID: { in: sheetIDs }
+        }))
+      : [];
+
+    const approvedBillableEntries = approvedEntries.filter(entry => entry.is_billable);
+    const approvedHours = approvedBillableEntries.reduce(
+      (sum, entry) => sum + Number(entry.hours || 0), 0
+    );
+    const consumed = approvedHours * Number(budget.billing_rate_hr || 0);
     const remaining = Number(budget.budget_amt) - consumed;
-    const pct = Number(budget.budget_amt) > 0 ? consumed / Number(budget.budget_amt) * 100 : 0;
-    const status = pct > 100 ? 'Breached' : pct >= 80 ? 'At Risk' : 'Within Budget';
-    await tx.run(UPDATE(Budgets).set({ consumed_amt: consumed, remaining_amt: remaining, budget_status: status }).where({ ID: budgetID }));
-    await audit(req, 'Budgets', budgetID, 'RECALCULATE', { consumed_amt: budget.consumed_amt }, { consumed_amt: consumed, remaining_amt: remaining, budget_status: status });
-    return { ID: budgetID, consumed_amt: consumed, remaining_amt: remaining, budget_status: status };
+    const pct = Number(budget.budget_amt) > 0
+      ? consumed / Number(budget.budget_amt) * 100
+      : 0;
+
+    // Accepted defaults: <75% Within Budget; 75-<90% Warning;
+    // 90-<100% At Risk; >=100% Breached.
+    const status = pct >= 100
+      ? 'Breached'
+      : pct >= 90
+        ? 'At Risk'
+        : pct >= 75
+          ? 'Warning'
+          : 'Within Budget';
+
+    await tx.run(UPDATE(Budgets).set({
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status
+    }).where({ ID: budgetID }));
+
+    // Keep task actual hours consistent with the same approved-only rule.
+    const projectTasks = await tx.run(SELECT.from(Tasks).where({
+      project_ID: budget.project_ID
+    }));
+    const hoursByTask = new Map();
+    for (const entry of approvedEntries) {
+      const taskID = entry.task_ID;
+      hoursByTask.set(taskID, (hoursByTask.get(taskID) || 0) + Number(entry.hours || 0));
+    }
+    for (const task of projectTasks) {
+      await tx.run(UPDATE(Tasks).set({
+        actual_hours: hoursByTask.get(task.ID) || 0
+      }).where({ ID: task.ID }));
+    }
+
+    await audit(req, 'Budgets', budgetID, 'RECALCULATE', {
+      consumed_amt: budget.consumed_amt,
+      remaining_amt: budget.remaining_amt,
+      budget_status: budget.budget_status
+    }, {
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status,
+      approved_billable_hours: approvedHours
+    });
+
+    return {
+      ID: budgetID,
+      consumed_amt: consumed,
+      remaining_amt: remaining,
+      budget_status: status
+    };
   });
 
   this.on('generateInvoice', 'BillingService', async req => {
