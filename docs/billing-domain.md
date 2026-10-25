@@ -19,6 +19,17 @@ The extraction is deliberately gradual. Domain modules now live directly under `
 
 The service implementation file now exports separate implementations for the service definitions in `psa-services.cds`. Billing actions are registered on the `BillingService` instance by action name. This correction is source-only and still requires an approved build/runtime verification step.
 
+## Database-backed invoice numbering
+
+- Invoice numbers are assigned when a Draft invoice is issued, not when the draft is generated.
+- Format: `INV-YYYY-000001`; the six-digit sequence resets to `000001` when the UTC calendar year changes.
+- `db/schema.cds` adds a singleton `InvoiceNumberCounter` record and a uniqueness constraint on `Invoices.invoice_number`.
+- `db/data/psa-InvoiceNumberCounter.csv` seeds the singleton counter row. Ensure this seed row is deployed to the target database before issuing invoices; the handler returns a configuration error if it is missing.
+- The issue handler updates the singleton counter row within the invoice transaction before reading/incrementing the counter. The database write lock serializes concurrent allocations; invoice number, issue status, and counter update commit or roll back together.
+- Sequence is capped at six digits for this format. At `999999`, issuing is blocked rather than silently producing a different format.
+- The annual reset uses UTC calendar year. If Finance requires a local timezone, legal entity, or fiscal-year numbering, confirm it before production.
+- Source-only implementation: no build, test, or runtime verification has been run yet.
+
 ## Current T&M flow
 
 1. Finance requests invoice generation with a project and inclusive period start/end.
@@ -37,7 +48,7 @@ The service implementation file now exports separate implementations for the ser
 
 ## Known gaps — do not treat billing as production-ready
 
-1. **Invoice numbering:** the schema has an `invoice_number` field, but no database-backed counter or concurrency-safe allocation yet.
+1. **Invoice numbering:** database-backed, serialized numbering has been implemented in source; it still requires an approved build/runtime verification and deployment of the counter seed row.
 2. **Tax:** the current zero-tax calculation is provisional only. A Finance-approved tax configuration, jurisdiction, inclusive/exclusive rules, and rounding policy are not supplied. Do not interpret zero as a tax determination.
 3. **Fixed billing:** eligible milestone status, milestone fee source, partial milestone invoicing, and contract-specific rules need confirmation before implementing the generator.
 4. **Retainer billing:** allowed period values, billing calendar, proration, and duplicate-period key rules need confirmation before implementing the generator.
@@ -48,11 +59,10 @@ The service implementation file now exports separate implementations for the ser
 
 ## Next safe implementation order
 
-1. Confirm invoice-number format and allocation semantics; add database-backed, concurrency-safe numbering.
-2. Obtain approved tax rules and block issue where required configuration is absent.
-3. Confirm fixed-fee milestone eligibility and retainer period semantics, then implement each as a separate module with source keys.
-4. Design draft cancellation/source-link release and issued-invoice reversal/credit-note policy.
-5. Connect real email after the provider configuration is supplied.
-6. Implement PDF generation from stored issued values.
+1. Obtain approved tax rules and block issue where required configuration is absent.
+2. Confirm fixed-fee milestone eligibility and retainer period semantics, then implement each as a separate module with source keys.
+3. Design draft cancellation/source-link release and issued-invoice reversal/credit-note policy.
+4. Connect real email after the provider configuration is supplied.
+5. Implement PDF generation from stored issued values.
 
 No tests, build, or runtime checks have been run for the current changes. Ask the developer before any verification commands.
