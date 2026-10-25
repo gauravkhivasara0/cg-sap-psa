@@ -1,8 +1,8 @@
 const cds = require('@sap/cds');
 const { SELECT, UPDATE } = cds.ql;
 
-module.exports = function registerTimesheetHandlers({ service, Timesheets, TimesheetEntries, Tasks, audit }) {
-  service.before(['CREATE', 'UPDATE'], 'TimesheetEntries', async req => {
+module.exports = function registerTimesheetHandlers({ service, serviceName, Timesheets, TimesheetEntries, Tasks, audit }) {
+  if (serviceName === 'EmployeeService') service.before(['CREATE', 'UPDATE'], 'MyTimesheetEntries', async req => {
     const tx = cds.tx(req);
     const d = req.data;
     const entryID = d.ID || req.params?.[0]?.ID;
@@ -67,7 +67,7 @@ module.exports = function registerTimesheetHandlers({ service, Timesheets, Times
     }
   });
 
-  service.on('submitTimesheet', 'EmployeeService', async req => {
+  if (serviceName === 'EmployeeService') service.on('submitTimesheet', async req => {
     const { timesheetID } = req.data;
     const tx = cds.tx(req);
     const sheet = await tx.run(SELECT.one.from(Timesheets).where({ ID: timesheetID }));
@@ -94,7 +94,7 @@ module.exports = function registerTimesheetHandlers({ service, Timesheets, Times
     return { ID: timesheetID, status: 'Submitted', total_billable_hours: billable };
   });
 
-  service.on('approveTimesheet', 'ProjectService', async req => {
+  if (serviceName === 'ProjectService') service.on('approveTimesheet', async req => {
     const { timesheetID } = req.data;
     const tx = cds.tx(req);
     const sheet = await tx.run(SELECT.one.from(Timesheets).where({ ID: timesheetID }));
@@ -109,7 +109,7 @@ module.exports = function registerTimesheetHandlers({ service, Timesheets, Times
     return { ID: timesheetID, status: 'Approved' };
   });
 
-  service.on('rejectTimesheet', 'ProjectService', async req => {
+  if (serviceName === 'ProjectService') service.on('rejectTimesheet', async req => {
     const { timesheetID, reason } = req.data;
     if (!reason || !String(reason).trim()) return req.reject(400, 'A rejection reason is required.');
     const tx = cds.tx(req);
