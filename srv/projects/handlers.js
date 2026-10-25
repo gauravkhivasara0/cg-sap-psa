@@ -28,7 +28,7 @@ module.exports = function registerProjectHandlers({ service, Projects, Budgets, 
     if (d.status && !['To Do', 'In Progress', 'Done', 'Blocked'].includes(d.status)) req.error(400, 'Invalid task status.');
   });
 
-  service.on('recalculateBudget', 'ProjectService', async req => {
+  service.on('recalculateBudget', async req => {
     const { budgetID } = req.data;
     const tx = cds.tx(req);
     const budget = await tx.run(SELECT.one.from(Budgets).where({ ID: budgetID }));
