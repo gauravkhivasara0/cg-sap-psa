@@ -6,7 +6,7 @@ const cds = require('@sap/cds');
  * numbering and tax rules are explicitly tracked in docs/open-decisions.md.
  */
 module.exports = {
-  async issueInvoice({ req, tx, Invoices, InvoiceLines, audit }) {
+  async issueInvoice({ req, tx, Invoices, InvoiceLines, InvoiceNumberCounter, audit }) {
     const { invoiceID } = req.data;
     const invoice = await tx.run(cds.ql.SELECT.one.from(Invoices).where({ ID: invoiceID }));
     if (!invoice) return req.reject(404, 'Invoice not found.');
@@ -22,8 +22,36 @@ module.exports = {
     }
 
     // TODO(CONFIG): Finance must confirm the 30-calendar-day due-date term.
-    // TODO(CONFIG): wire approved tax rules and DB-backed invoice numbering before production issue.
+    // Lock the singleton counter row by updating it inside this transaction.
+    // The database row lock serializes concurrent issue requests until commit.
+    const counterID = 'b0000000-0000-4000-8000-000000000001';
+    const lockToken = cds.utils.uuid();
+    await tx.run(cds.ql.UPDATE(InvoiceNumberCounter)
+      .set({ lock_token: lockToken })
+      .where({ ID: counterID }));
+    const counter = await tx.run(cds.ql.SELECT.one.from(InvoiceNumberCounter)
+      .where({ ID: counterID }));
+    if (!counter) {
+      return req.reject(500, 'Invoice number counter is not configured. Ensure db/data/psa-InvoiceNumberCounter.csv has been deployed before issuing invoices.');
+    }
+
     const issuedAt = new Date();
+    const sequenceYear = issuedAt.getUTCFullYear();
+    const previousYear = Number(counter.sequence_year);
+    const previousNumber = Number(counter.next_number);
+    if (!Number.isInteger(previousNumber) || previousNumber < 0) {
+      return req.reject(500, 'Invoice number counter contains an invalid next_number value.');
+    }
+    const nextNumber = previousYear === sequenceYear ? previousNumber + 1 : 1;
+    if (nextNumber > 999999) {
+      return req.reject(409, 'The invoice number sequence has reached 999999 for this year. Finance must configure a longer number format before issuing more invoices.');
+    }
+    const invoiceNumber = 'INV-' + sequenceYear + '-' + String(nextNumber).padStart(6, '0');
+
+    await tx.run(cds.ql.UPDATE(InvoiceNumberCounter).set({
+      sequence_year: sequenceYear,
+      next_number: nextNumber
+    }).where({ ID: counterID }));
     const dueDate = new Date(issuedAt);
     dueDate.setUTCDate(dueDate.getUTCDate() + 30);
     const issuedDate = issuedAt.toISOString().slice(0, 10);
@@ -31,6 +59,7 @@ module.exports = {
 
     await tx.run(cds.ql.UPDATE(Invoices).set({
       payment_status: 'Issued',
+      invoice_number: invoiceNumber,
       invoice_date: invoice.invoice_date || issuedDate,
       due_date: dueDateString,
       issued_at: issuedAt.toISOString(),
@@ -41,10 +70,10 @@ module.exports = {
       payment_status: 'Draft', total_amt: invoice.total_amt,
       tax_amt: invoice.tax_amt, currency_code: invoice.currency_code
     }, {
-      payment_status: 'Issued', issued_at: issuedAt.toISOString(),
+      payment_status: 'Issued', invoice_number: invoiceNumber, issued_at: issuedAt.toISOString(),
       due_date: dueDateString, immutable_on_issue: true
     });
-    return { ID: invoiceID, payment_status: 'Issued', due_date: dueDateString };
+    return { ID: invoiceID, invoice_number: invoiceNumber, payment_status: 'Issued', due_date: dueDateString };
   },
 
   async markInvoicePaid({ req, tx, Invoices, audit }) {
