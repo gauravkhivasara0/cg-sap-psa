@@ -45,6 +45,14 @@ Baseline: Enterprise PSA FRD and presentation
 - Duplicate-billing protection currently checks existing source links before creating the draft. A database-level uniqueness/concurrency guarantee and invoice cancellation/release behavior still need design.
 - These source changes have not been validated by a CDS build, tests, or runtime checks.
 
+## Service registration correction (source changes only)
+
+- Updated `srv/psa-services.js` to export separate implementations for `ProjectService`, `EmployeeService`, and `BillingService`, because the paired CDS file defines multiple services.
+- Moved project, employee timesheet, and billing action handlers onto their owning service instances. Action handlers now register by action name without incorrectly passing the service name as an entity name.
+- Employee time-entry validation now targets the exposed `MyTimesheetEntries` projection; project approval/rejection actions remain on `ProjectService`.
+- Extracted the shared audit writer into `srv/audit.js`.
+- This is a source-level correction based on CAP's documented multi-service implementation pattern. It has **not** been build-checked or runtime-verified. No build, tests, or runtime checks were run.
+
 ## Source folder conventions
 
 ### Current domain layout
