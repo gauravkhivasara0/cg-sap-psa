@@ -53,6 +53,14 @@ Baseline: Enterprise PSA FRD and presentation
 - Extracted the shared audit writer into `srv/audit.js`.
 - This is a source-level correction based on CAP's documented multi-service implementation pattern. It has **not** been build-checked or runtime-verified. No build, tests, or runtime checks were run.
 
+## Invoice numbering increment (source changes only)
+
+- Added `InvoiceNumberCounter` to `db/schema.cds` and seeded its singleton row in `db/data/psa-InvoiceNumberCounter.csv`.
+- Added a database uniqueness constraint for invoice numbers.
+- Invoice numbers are allocated on issue using the selected `INV-YYYY-000001` format. The counter row is updated inside the issue transaction to serialize concurrent allocations; the sequence resets each UTC calendar year and is capped at six digits.
+- The counter seed row must be deployed to each target database before invoices can be issued. Missing counter configuration returns an explicit error.
+- No build, tests, or runtime checks were run. This implementation must be verified with an approved CAP build and concurrent issue scenario before production use. Finance must confirm UTC calendar-year reset rules.
+
 ## Source folder conventions
 
 ### Current domain layout
