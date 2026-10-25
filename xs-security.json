@@ -1,20 +1,111 @@
 {
   "xsappname": "psa",
+  "description": "Enterprise Professional Service Automation application using SAP CAPM with Fiori",
   "tenant-mode": "dedicated",
   "scopes": [
-    {"name": "$XSAPPNAME.EmployeeRole", "description": "PSA employee access"},
-    {"name": "$XSAPPNAME.ManagerRole", "description": "PSA project manager access"},
-    {"name": "$XSAPPNAME.FinanceRole", "description": "PSA finance and billing access"},
-    {"name": "$XSAPPNAME.DeptHeadRole", "description": "PSA department reporting access"},
-    {"name": "$XSAPPNAME.AdminRole", "description": "PSA master data administration"}
+    {
+      "name": "$XSAPPNAME.EmployeeRole",
+      "description": "PSA employee access"
+    },
+    {
+      "name": "$XSAPPNAME.ManagerRole",
+      "description": "PSA project manager access"
+    },
+    {
+      "name": "$XSAPPNAME.FinanceRole",
+      "description": "PSA finance and billing access"
+    },
+    {
+      "name": "$XSAPPNAME.DeptHeadRole",
+      "description": "PSA department reporting access"
+    },
+    {
+      "name": "$XSAPPNAME.AdminRole",
+      "description": "PSA master data administration"
+    }
   ],
   "role-templates": [
-    {"name": "PSA_Employee", "description": "Employee timesheet access", "scope-references": ["$XSAPPNAME.EmployeeRole"]},
-    {"name": "PSA_Manager", "description": "Project and timesheet approval access", "scope-references": ["$XSAPPNAME.ManagerRole"]},
-    {"name": "PSA_Finance", "description": "Invoice and billing access", "scope-references": ["$XSAPPNAME.FinanceRole"]},
-    {"name": "PSA_DeptHead", "description": "Department portfolio access", "scope-references": ["$XSAPPNAME.DeptHeadRole"]},
-    {"name": "PSA_Admin", "description": "Master data and configuration access", "scope-references": ["$XSAPPNAME.AdminRole"]}
+    {
+      "name": "PSA_Employee",
+      "description": "Employee timesheet access",
+      "scope-references": [
+        "$XSAPPNAME.EmployeeRole"
+      ]
+    },
+    {
+      "name": "PSA_Manager",
+      "description": "Project and timesheet approval access",
+      "scope-references": [
+        "$XSAPPNAME.ManagerRole"
+      ]
+    },
+    {
+      "name": "PSA_Finance",
+      "description": "Invoice and billing access",
+      "scope-references": [
+        "$XSAPPNAME.FinanceRole"
+      ]
+    },
+    {
+      "name": "PSA_DeptHead",
+      "description": "Department portfolio access",
+      "scope-references": [
+        "$XSAPPNAME.DeptHeadRole"
+      ]
+    },
+    {
+      "name": "PSA_Admin",
+      "description": "Master data and configuration access",
+      "scope-references": [
+        "$XSAPPNAME.AdminRole"
+      ]
+    }
   ],
-  "attributes": [],
-  "authorities-inheritance": false
+  "role-collections": [
+    {
+      "name": "PSA_Employee",
+      "description": "Employee timesheet access",
+      "role-template-references": [
+        "$XSAPPNAME.PSA_Employee"
+      ]
+    },
+    {
+      "name": "PSA_Manager",
+      "description": "Project and timesheet approval access",
+      "role-template-references": [
+        "$XSAPPNAME.PSA_Manager"
+      ]
+    },
+    {
+      "name": "PSA_Finance",
+      "description": "Invoice and billing access",
+      "role-template-references": [
+        "$XSAPPNAME.PSA_Finance"
+      ]
+    },
+    {
+      "name": "PSA_DeptHead",
+      "description": "Department portfolio access",
+      "role-template-references": [
+        "$XSAPPNAME.PSA_DeptHead"
+      ]
+    },
+    {
+      "name": "PSA_Admin",
+      "description": "Master data and configuration access",
+      "role-template-references": [
+        "$XSAPPNAME.PSA_Admin"
+      ]
+    }
+  ],
+  "authorities": [
+    "$ACCEPT_GRANTED_AUTHORITIES"
+  ],
+  "oauth2-configuration": {
+    "token-validity": 9000,
+    "redirect-uris": [
+      "https://*.cfapps.us10-001.hana.ondemand.com/login/callback"
+    ]
+  },
+  "xsenableasyncservice": true
 }
