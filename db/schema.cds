@@ -109,6 +109,7 @@ entity TimesheetEntries : cuid, managed {
   is_billable : Boolean default true;
   notes : String(255);
 }
+@assert.unique.invoiceNumber: [invoice_number]
 entity Invoices : cuid, managed {
   client : Association to one Clients @mandatory;
   project : Association to one Projects @mandatory;
@@ -132,6 +133,13 @@ entity Invoices : cuid, managed {
   project_name_snapshot : String(100);
   immutable_on_issue : Boolean default false;
   lines : Composition of many InvoiceLines on lines.invoice = $self;
+}
+// Singleton counter row: lock/update inside the invoice-issue transaction.
+ // Sequence resets at the start of each calendar year.
+entity InvoiceNumberCounter : cuid {
+  sequence_year : Integer @mandatory;
+  next_number : Integer @mandatory;
+  lock_token : String(36);
 }
 entity InvoiceLines : cuid, managed {
   invoice : Association to one Invoices @mandatory;
