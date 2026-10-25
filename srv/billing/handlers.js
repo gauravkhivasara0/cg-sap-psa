@@ -57,6 +57,7 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     tx: cds.tx(req),
     Invoices,
     InvoiceLines,
+    InvoiceNumberCounter: cds.entities('psa').InvoiceNumberCounter,
     audit
   }));
 
