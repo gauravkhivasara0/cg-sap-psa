@@ -1,46 +1,58 @@
 const cds = require('@sap/cds');
+const audit = require('./audit');
 const registerProjectHandlers = require('./projects/handlers');
 const registerTimesheetHandlers = require('./timesheets/handlers');
 const registerBillingHandlers = require('./billing/handlers');
 
-module.exports = cds.service.impl(async function () {
+// This CDS file defines multiple services. Export one implementation per
+// service so each domain's handlers are attached only to the owning service.
+exports.ProjectService = cds.service.impl(function () {
   const {
-    Projects,
-    Budgets,
-    Clients,
-    Milestones,
-    Tasks,
-    Timesheets,
-    TimesheetEntries,
-    Invoices,
-    InvoiceLines,
-    InvoiceSourceLinks,
-    AuditLog
+    Projects, Budgets, Milestones, Tasks, Timesheets, TimesheetEntries
   } = cds.entities('psa');
-
-  // Shared audit helper. Domain handlers receive it as a dependency so audit
-  // persistence stays consistent while business rules live in domain modules.
-  const audit = async (req, entityName, recordID, action, oldValues, newValues) => {
-    const tx = cds.tx(req);
-    await tx.run(cds.ql.INSERT.into(AuditLog).entries({
-      entity_name: entityName,
-      record_id: String(recordID || ''),
-      action,
-      actor: req.user?.id || 'unknown',
-      changed_at: new Date().toISOString(),
-      old_values: oldValues ? JSON.stringify(oldValues) : null,
-      new_values: newValues ? JSON.stringify(newValues) : null
-    }));
-  };
 
   registerProjectHandlers({
     service: this, Projects, Budgets, Milestones, Tasks, Timesheets, TimesheetEntries, audit
   });
   registerTimesheetHandlers({
-    service: this, Timesheets, TimesheetEntries, Tasks, audit
+    service: this,
+    serviceName: 'ProjectService',
+    Timesheets,
+    TimesheetEntries,
+    Tasks,
+    audit
   });
+});
+
+exports.EmployeeService = cds.service.impl(function () {
+  const { Timesheets, TimesheetEntries, Tasks } = cds.entities('psa');
+
+  registerTimesheetHandlers({
+    service: this,
+    serviceName: 'EmployeeService',
+    Timesheets,
+    TimesheetEntries,
+    Tasks,
+    audit
+  });
+});
+
+exports.BillingService = cds.service.impl(function () {
+  const {
+    Projects, Budgets, Clients, Timesheets, TimesheetEntries,
+    Invoices, InvoiceLines, InvoiceSourceLinks
+  } = cds.entities('psa');
+
   registerBillingHandlers({
-    service: this, Projects, Budgets, Clients, Timesheets, TimesheetEntries,
-    Invoices, InvoiceLines, InvoiceSourceLinks, audit
+    service: this,
+    Projects,
+    Budgets,
+    Clients,
+    Timesheets,
+    TimesheetEntries,
+    Invoices,
+    InvoiceLines,
+    InvoiceSourceLinks,
+    audit
   });
 });
