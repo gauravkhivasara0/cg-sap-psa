@@ -33,7 +33,7 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     if (invoice?.immutable_on_issue) req.error(409, 'Lines belonging to an issued invoice cannot be changed.');
   });
 
-  service.on('generateInvoice', 'BillingService', async req => {
+  service.on('generateInvoice', async req => {
     const tx = cds.tx(req);
     return generateTimeAndMaterialInvoice({
       req,
@@ -52,7 +52,7 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     });
   });
 
-  service.on('issueInvoice', 'BillingService', async req => invoiceLifecycle.issueInvoice({
+  service.on('issueInvoice', async req => invoiceLifecycle.issueInvoice({
     req,
     tx: cds.tx(req),
     Invoices,
@@ -60,7 +60,7 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     audit
   }));
 
-  service.on('markInvoicePaid', 'BillingService', async req => invoiceLifecycle.markInvoicePaid({
+  service.on('markInvoicePaid', async req => invoiceLifecycle.markInvoicePaid({
     req,
     tx: cds.tx(req),
     Invoices,
