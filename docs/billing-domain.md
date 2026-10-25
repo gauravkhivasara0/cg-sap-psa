@@ -15,6 +15,10 @@ This document describes the billing code as it currently exists on `feature/frd-
 
 The extraction is deliberately gradual. Domain modules now live directly under `srv/`; a separate `lib/` directory is not required. Keep simple, named modules; do not introduce a generic repository/service framework without a concrete need. Fiori app code stays under `app/` and does not own billing rules.
 
+## Service registration note
+
+The service implementation file now exports separate implementations for the service definitions in `psa-services.cds`. Billing actions are registered on the `BillingService` instance by action name. This correction is source-only and still requires an approved build/runtime verification step.
+
 ## Current T&M flow
 
 1. Finance requests invoice generation with a project and inclusive period start/end.
