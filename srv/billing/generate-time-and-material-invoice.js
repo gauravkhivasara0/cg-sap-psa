@@ -1,4 +1,5 @@
 const cds = require('@sap/cds');
+const getSampleTaxRate = require('./tax-rules');
 
 /**
  * Generate a draft T&M invoice and preserve a source link for every billed
@@ -70,9 +71,11 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
   }
 
   const rate = configuredRate;
+  const taxRate = getSampleTaxRate(project.tax_rate, req);
   const invoiceLines = periodEntries.map(entry => {
     const quantity = Number(entry.hours);
     const lineSubtotal = Math.round(quantity * rate * 100) / 100;
+    const lineTax = Math.round(lineSubtotal * taxRate) / 100;
     return {
       entry,
       line: {
@@ -82,18 +85,17 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
         quantity,
         unit_price: rate,
         line_subtotal: lineSubtotal,
-        tax_rate: 0, // TODO(CONFIG): apply an approved tax configuration; zero is provisional, not a tax determination.
-        tax_amt: 0, // TODO(CONFIG): calculate tax after jurisdiction/rules are confirmed.
-        line_total: lineSubtotal
+        tax_rate: taxRate,
+        tax_amt: lineTax,
+        line_total: Math.round((lineSubtotal + lineTax) * 100) / 100
       }
     };
   });
 
   const billableHours = invoiceLines.reduce((sum, item) => sum + item.line.quantity, 0);
   const subtotal = Math.round(invoiceLines.reduce((sum, item) => sum + item.line.line_subtotal, 0) * 100) / 100;
-  // Tax is left at the schema's provisional zero until an approved tax setup is supplied.
-  const taxAmount = 0;
-  const total = subtotal + taxAmount;
+  const taxAmount = Math.round(invoiceLines.reduce((sum, item) => sum + item.line.tax_amt, 0) * 100) / 100;
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
   const invoiceID = cds.utils.uuid();
   const invoiceDate = new Date().toISOString().slice(0, 10);
 
@@ -108,7 +110,7 @@ module.exports = async function generateTimeAndMaterialInvoice({ req, tx, entiti
     subtotal_amt: subtotal,
     total_amt: total,
     tax_amt: taxAmount,
-    tax_rate: 0, // TODO(CONFIG): source this from approved tax configuration.
+    tax_rate: taxRate,
     currency_code: budget.currency_code,
     payment_status: 'Draft',
     client_name_snapshot: client.client_name,
