@@ -4,13 +4,25 @@ These CSV files contain **fictional development-only data** for local CAP develo
 
 ## Included scenarios
 
-- Two demo clients, two departments (with heads), and four demo employees (two managers).
-- Code lists for billing types, project/milestone/task/timesheet statuses and priorities (required for value helps).
-- A Time & Materials (T&M) project, a Fixed-fee project (both managed by Morgan) and a Retainer project (managed by Casey).
-- Project budgets, milestones, and tasks.
-- One Approved timesheet with three approved billable entries dated 6–8 October 2026. Use the period `2026-10-01` through `2026-10-31` to exercise the current T&M invoice generator.
-- One Draft timesheet and entry for a future submit/approval walkthrough.
-- Budget and task threshold configuration rows.
+Every table has data:
+
+| Table | Rows | Highlights |
+|---|---|---|
+| Code lists (billing types, statuses, priorities) | 3–5 each | Needed for the Fiori value helps |
+| Clients | 4 | One inactive (CL-004) |
+| Departments | 3 | Engineering, Consulting, Finance, each with a head |
+| Employees | 7 | Two managers, one inactive employee (Sam Former), Fiona Finance |
+| Projects / Budgets | 3 / 3 | T&M PRJ-001 and Fixed PRJ-002 (Morgan), Retainer PRJ-003 (Casey) |
+| Milestones / Tasks | 3 / 4 | One completed milestone, one Done task |
+| Timesheets / Entries | 6 / 11 | Every status: Draft, Submitted, Approved, Rejected, Invoiced |
+| Invoices / Lines / Source links | 3 / 4 / 4 | INV-2026-0001 Paid (T&M, September), INV-2026-0002 issued and past due (shown as Overdue), October retainer Draft |
+| ThresholdConfig | 5 | Budget 75/90/100 %, task burn 80/100 % |
+| Notifications | 5 | Approval / rejection / submission notices |
+| AuditLog | 7 | Submit, approve, reject, invoice generate/issue/pay, employee deactivation |
+
+Budget and hour figures match the approved and invoiced entries (PRJ-001: 15 h, USD 1,625 consumed;
+PRJ-003: 6 h, USD 900 consumed). Generate a T&M invoice for PRJ-001 for `2026-10-01`–`2026-10-31`
+to bill the 6 approved October hours (USD 750).
 
 ## Important safety notes
 

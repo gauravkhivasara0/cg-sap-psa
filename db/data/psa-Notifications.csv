@@ -1,0 +1,6 @@
+ID;recipient_ID;event_type;subject;message;delivery_status;related_entity;related_record_id;deduplication_key
+e0000000-0000-4000-8000-000000000001;30000000-0000-4000-8000-000000000002;TimesheetApproved;Timesheet for week 2026-10-05 approved;Your timesheet for week 2026-10-05 was approved by Morgan Manager.;Pending;Timesheets;80000000-0000-4000-8000-000000000001;
+e0000000-0000-4000-8000-000000000002;30000000-0000-4000-8000-000000000002;TimesheetApproved;Timesheet for week 2026-09-07 approved;Your timesheet for week 2026-09-07 was approved by Morgan Manager.;Pending;Timesheets;80000000-0000-4000-8000-000000000003;
+e0000000-0000-4000-8000-000000000003;30000000-0000-4000-8000-000000000005;TimesheetRejected;Timesheet for week 2026-10-05 rejected;Reason: Please add notes describing the advisory topics;Pending;Timesheets;80000000-0000-4000-8000-000000000004;
+e0000000-0000-4000-8000-000000000004;30000000-0000-4000-8000-000000000005;TimesheetApproved;Timesheet for week 2026-10-12 approved;Your timesheet for week 2026-10-12 was approved by Casey Lead.;Pending;Timesheets;80000000-0000-4000-8000-000000000005;
+e0000000-0000-4000-8000-000000000005;30000000-0000-4000-8000-000000000004;TimesheetSubmitted;Riley Analyst submitted a timesheet;Timesheet for week 2026-10-19 (5 h) is waiting for your approval.;Pending;Timesheets;80000000-0000-4000-8000-000000000006;

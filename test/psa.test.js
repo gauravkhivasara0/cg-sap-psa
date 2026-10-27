@@ -85,7 +85,7 @@ describe('Authentication and role-based access', () => {
 
   it('employees only see their own timesheets', async () => {
     const t = await as(U.taylor).get('/odata/v4/employee/MyTimesheets');
-    assert.equal(t.data.value.length, 2);
+    assert.equal(t.data.value.length, 3);
     const j = await as(U.jordan).get('/odata/v4/employee/MyTimesheets');
     assert.equal(j.data.value.length, 0);
     const direct = await as(U.jordan).get('/odata/v4/employee/MyTimesheets(ID=80000000-0000-4000-8000-000000000001,IsActiveEntity=true)');
@@ -203,17 +203,17 @@ describe('Timesheet entry, submission and approval (FR-004, FR-006, FR-007)', ()
     assert.equal(a.data.approvedBy_ID, '30000000-0000-4000-8000-000000000001');
 
     const p = await as(U.morgan).get(`/odata/v4/project/Projects(ID=${PRJ1},IsActiveEntity=true)?$expand=budget`);
-    // seed: 6 approved billable h; now +8 billable +4 non-billable -> 18 h total, 14 billable x 125
-    assert.equal(Number(p.data.consumed_hours), 18);
-    assert.equal(Number(p.data.budget.consumed_amt), 1750);
-    assert.equal(Number(p.data.budget.remaining_amt), 18250);
+    // seed: Oct 6 h + Sept 9 h (13 billable); now +8 billable +4 non-billable -> 27 h, 21 billable x 125
+    assert.equal(Number(p.data.consumed_hours), 27);
+    assert.equal(Number(p.data.budget.consumed_amt), 2625);
+    assert.equal(Number(p.data.budget.remaining_amt), 17375);
     assert.equal(p.data.budget.budget_status, 'Within Budget');
     const t = await as(U.morgan).get(`/odata/v4/project/Tasks(ID=${TASK_OPEN},IsActiveEntity=true)`);
-    assert.equal(Number(t.data.actual_hours), 18);
+    assert.equal(Number(t.data.actual_hours), 27);
 
     const burn = await as(U.morgan).get(`/odata/v4/project/getBurnSummary(projectID=${PRJ1})`);
     assert.equal(burn.status, 200, msg(burn));
-    assert.equal(Number(burn.data.consumed_pct), 8.75);
+    assert.equal(Number(burn.data.consumed_pct), 13.13);
     assert.equal((await as(U.casey).get(`/odata/v4/project/getBurnSummary(projectID=${PRJ1})`)).status, 404);
   });
 });
@@ -314,9 +314,9 @@ describe('Invoicing (FR-010, FR-011)', () => {
     assert.equal(r.data.payment_status, 'Draft');
     const lines = await api.get(`/odata/v4/billing/Invoices(${invoiceID})/lines`);
     assert.equal(lines.data.value.length, 4);
-    // Fully billed timesheets are locked as Invoiced
+    // Fully billed timesheets are locked as Invoiced (2 now + 1 from the seeded September invoice)
     const sheets = await api.get('/odata/v4/billing/Timesheets?$filter=status eq \'Invoiced\'');
-    assert.equal(sheets.data.value.length, 2);
+    assert.equal(sheets.data.value.length, 3);
   });
 
   it('never bills the same hours twice', async () => {
@@ -337,7 +337,7 @@ describe('Invoicing (FR-010, FR-011)', () => {
     const i = await api.post(`/odata/v4/billing/Invoices(${invoiceID})/BillingService.issueInvoice`);
     assert.equal(i.status, 200, msg(i));
     assert.equal(i.data.payment_status, 'Issued');
-    assert.match(i.data.invoice_number, /^INV-\d{4}-0001$/);
+    assert.match(i.data.invoice_number, /^INV-\d{4}-\d{4}$/);
     assert.equal((await api.post(`/odata/v4/billing/Invoices(${invoiceID})/BillingService.issueInvoice`)).status, 409);
     assert.equal((await api.post(`/odata/v4/billing/Invoices(${invoiceID})/BillingService.cancelInvoice`, { reason: 'x' })).status, 409);
     assert.equal((await api.patch(`/odata/v4/billing/Invoices(${invoiceID})`, { total_amt: 1 })).status, 405);
@@ -362,6 +362,14 @@ describe('Invoicing (FR-010, FR-011)', () => {
     assert.equal(r.status, 200, msg(r));
     assert.equal(Number(r.data.total_amt), 9000);
     assert.equal((await generate(PRJ2, '2026-01-01', '2026-12-31')).status, 400);
+  });
+
+  it('shows seeded invoice history; issued invoices past due are Overdue', async () => {
+    const r = await api.get('/odata/v4/billing/Invoices?$filter=invoice_number ne null&$orderby=invoice_number');
+    const seeded = r.data.value.filter(i => ['INV-2026-0001', 'INV-2026-0002'].includes(i.invoice_number));
+    assert.deepEqual(seeded.map(i => i.payment_status), ['Paid', 'Overdue']);
+    // the seeded October retainer draft blocks billing October twice
+    assert.equal((await generate(PRJ3, '2026-10-01', '2026-10-31')).status, 400);
   });
 
   it('bills a retainer fee once per period', async () => {
