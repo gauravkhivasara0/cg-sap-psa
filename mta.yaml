@@ -1,7 +1,7 @@
 _schema-version: 3.3.0
 ID: psa
 version: 1.0.0
-description: "Welcome to your new CAP project."
+description: "Enterprise Professional Services Automation (PSA) - CAP + Fiori on SAP BTP"
 parameters:
   enable-parallel-deployments: true
 build-parameters:
@@ -10,12 +10,16 @@ build-parameters:
       commands:
         - npm ci
         - npx cds build --production
+
 modules:
+  # CAP backend (OData v4), protected by XSUAA
   - name: psa-srv
     type: nodejs
     path: gen/srv
     parameters:
       instances: 1
+      memory: 256M
+      disk-quota: 1024M
       buildpack: nodejs_buildpack
     build-parameters:
       builder: npm-ci
@@ -27,6 +31,7 @@ modules:
       - name: psa-auth
       - name: psa-db
 
+  # Deploys tables, views and CSV data into the HDI container
   - name: psa-db-deployer
     type: hdb
     path: gen/db
@@ -34,6 +39,29 @@ modules:
       buildpack: nodejs_buildpack
     requires:
       - name: psa-db
+
+  # Standalone approuter: XSUAA login, Fiori apps (static), /odata -> psa-srv
+  - name: psa-approuter
+    type: approuter.nodejs
+    path: app
+    parameters:
+      memory: 256M
+      disk-quota: 512M
+      keep-existing-routes: true
+    build-parameters:
+      ignore:
+        - node_modules/
+        - "*.cds"
+        - "*/annotations.cds"
+    requires:
+      - name: srv-api
+        group: destinations
+        properties:
+          name: srv-api # must match "destination" in app/xs-app.json
+          url: ~{srv-url}
+          forwardAuthToken: true
+          timeout: 60000
+      - name: psa-auth
 
 resources:
   - name: psa-auth
@@ -45,10 +73,6 @@ resources:
       config:
         xsappname: psa-${org}-${space}
         tenant-mode: dedicated
-        oauth2-configuration:
-          credential-types:
-            - "binding-secret"
-            - "x509"
   - name: psa-db
     type: com.sap.xs.hdi-container
     parameters:

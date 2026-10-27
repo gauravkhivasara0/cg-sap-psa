@@ -87,5 +87,8 @@
     "sql": {
       "native_hana_associations": false
     }
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
   }
 }

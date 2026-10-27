@@ -1,5 +1,21 @@
 # PSA implementation status
 
+## Minimum functional app with XSUAA (branch claude/minimal-app-xsuaa-auth-bspcdq)
+
+- Authentication: XSUAA in production (`cds.requires.[production].auth = xsuaa`), mocked users locally.
+  Role collections PSA_Employee / PSA_Manager / PSA_Finance / PSA_DeptHead / PSA_Admin are created
+  from `xs-security.json` and assigned in the BTP cockpit.
+- Identity mapping: `srv/auth/user-context.js` maps the login e-mail to `Employees.email` and sets
+  `$user.employeeId` / `$user.departmentId`, used by `@restrict` row-level rules (DEC-004).
+- Services rewritten with bound actions (submit, approve, reject, recalculate, issue, pay, cancel) and
+  draft-enabled Fiori Elements apps for every role, plus a role-based launchpad and standalone approuter.
+- Budget/task/milestone roll-up on approval with configurable thresholds and in-app notifications.
+- Invoice generation for T&M, Fixed and Retainer with source links preventing double billing.
+- Verified: `npm test` (23 API tests), browser tests of all apps, an end-to-end login test through
+  `@sap/approuter` + `@sap/xssec` against a local XSUAA stand-in (role assignment, 401/403,
+  forged/expired tokens, logout), and `mbt build`. Not yet verified on a real BTP subaccount / HANA.
+- Still open: e-mail delivery, DIM/PDF, integrations, tax configuration, Work Zone.
+
 Repository: cg-sap-psa  
 Working branch: feature/frd-first-cap-foundation  
 Baseline: Enterprise PSA FRD and presentation

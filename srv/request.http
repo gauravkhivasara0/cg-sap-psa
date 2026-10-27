@@ -1,0 +1,38 @@
+### Local requests (cds watch, mocked users from package.json, password "pass")
+@host = http://localhost:4004
+@employee = taylor.engineer@example.test
+@manager = morgan.manager@example.test
+@finance = fiona.finance@example.test
+
+### Who am I?
+GET {{host}}/odata/v4/user/me()
+Authorization: Basic {{employee}}:pass
+
+### My timesheets (row-level: only the logged-in employee's)
+GET {{host}}/odata/v4/employee/MyTimesheets?$expand=entries
+Authorization: Basic {{employee}}:pass
+
+### Submit the seeded Draft timesheet
+POST {{host}}/odata/v4/employee/MyTimesheets(ID=80000000-0000-4000-8000-000000000002,IsActiveEntity=true)/EmployeeService.submitTimesheet
+Authorization: Basic {{employee}}:pass
+Content-Type: application/json
+
+{}
+
+### Manager approves it (budget roll-up runs automatically)
+POST {{host}}/odata/v4/project/Timesheets(80000000-0000-4000-8000-000000000002)/ProjectService.approveTimesheet
+Authorization: Basic {{manager}}:pass
+Content-Type: application/json
+
+{}
+
+### Project burn summary
+GET {{host}}/odata/v4/project/getBurnSummary(projectID=40000000-0000-4000-8000-000000000001)
+Authorization: Basic {{manager}}:pass
+
+### Finance generates a T&M invoice for October
+POST {{host}}/odata/v4/billing/generateInvoice
+Authorization: Basic {{finance}}:pass
+Content-Type: application/json
+
+{ "projectID": "40000000-0000-4000-8000-000000000001", "periodFrom": "2026-10-01", "periodTo": "2026-10-31" }

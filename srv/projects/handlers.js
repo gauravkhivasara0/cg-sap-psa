@@ -8,6 +8,7 @@ const { assertUnique } = require('../common/unique');
 const BILLING_TYPES = ['TM', 'Fixed', 'Retainer'];
 const PROJECT_STATUSES = ['Draft', 'Active', 'On Hold', 'Completed', 'Cancelled'];
 const TASK_STATUSES = ['To Do', 'In Progress', 'Done', 'Blocked'];
+const MILESTONE_STATUSES = ['Not Started', 'In Progress', 'Completed', 'Delayed'];
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 
 const keyOf = req => {
@@ -34,6 +35,7 @@ const validateProject = (req, d) => {
   for (const [i, m] of (d.milestones || []).entries()) {
     const target = `milestones[${i}]`;
     if (m.start_date && m.end_date && m.end_date < m.start_date) req.error(400, `Milestone "${m.milestone_name}" ends before it starts.`, target);
+    if (m.status && !MILESTONE_STATUSES.includes(m.status)) req.error(400, `Milestone "${m.milestone_name}": invalid status.`, target);
     if (d.start_date && m.start_date && m.start_date < d.start_date) req.error(400, `Milestone "${m.milestone_name}" starts before the project.`, target);
     if (d.end_date && m.end_date && m.end_date > d.end_date) req.error(400, `Milestone "${m.milestone_name}" ends after the project.`, target);
     for (const t of m.tasks || []) {
