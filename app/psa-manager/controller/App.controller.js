@@ -130,7 +130,7 @@ sap.ui.define([
         document.body.appendChild(oLink);
         oLink.click();
         oLink.remove();
-        URL.revokeObjectURL(sUrl);
+        window.setTimeout(function () { URL.revokeObjectURL(sUrl); }, 1000);
         MessageToast.show("PDF download started.");
       } catch (error) {
         MessageBox.error("PDF download failed. " + this._errorText(error));
