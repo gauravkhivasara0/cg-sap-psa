@@ -49,6 +49,7 @@ module.exports = async function generateInvoicePdf({ tx, Invoices, InvoiceLines,
     y -= 18;
   }
   y -= 18;
+  newPageIfNeeded();
   text('Subtotal: ' + Number(invoice.subtotal_amt || 0).toFixed(2), 390, 10, regular); y -= 16;
   text('Tax: ' + Number(invoice.tax_amt || 0).toFixed(2), 390, 10, regular); y -= 18;
   text('Total: ' + String(invoice.currency_code || '') + ' ' + Number(invoice.total_amt || 0).toFixed(2), 350, 13, bold); y -= 28;
