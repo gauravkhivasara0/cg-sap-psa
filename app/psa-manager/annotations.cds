@@ -52,13 +52,3 @@ annotate ProjectService.Timesheets with @(
   ]
 );
 
-annotate BillingService.Invoices with @(
-  UI.LineItem: [
-    { Value: invoice_number, Label: 'Invoice Number' },
-    { Value: project.project_name, Label: 'Project' },
-    { Value: invoice_date, Label: 'Invoice Date' },
-    { Value: billable_hours, Label: 'Billable Hours' },
-    { Value: total_amt, Label: 'Total Amount' },
-    { Value: payment_status, Label: 'Payment Status' }
-  ]
-);
