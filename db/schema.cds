@@ -154,6 +154,7 @@ entity InvoiceLines : cuid, managed {
   milestone : Association to Milestones;
   sourceLinks : Composition of many InvoiceSourceLinks on sourceLinks.invoiceLine = $self;
 }
+@assert.unique.sourceKey: [source_key]
 entity InvoiceSourceLinks : cuid, managed {
   invoiceLine : Association to one InvoiceLines @mandatory;
   timesheetEntry : Association to TimesheetEntries;
