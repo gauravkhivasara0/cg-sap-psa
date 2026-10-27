@@ -1,12 +1,11 @@
-sap.ui.define(
-    ["sap/fe/core/AppComponent"],
-    function (Component) {
-        "use strict";
+sap.ui.define([
+    "sap/ui/core/UIComponent"
+], function (UIComponent) {
+    "use strict";
 
-        return Component.extend("com.psa.billing.psabilling.Component", {
-            metadata: {
-                manifest: "json"
-            }
-        });
-    }
-);
+    return UIComponent.extend("com.psa.billing.psabilling.Component", {
+        metadata: {
+            manifest: "json"
+        }
+    });
+});
