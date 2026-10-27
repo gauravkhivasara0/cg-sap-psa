@@ -1,46 +1,33 @@
 const cds = require('@sap/cds');
+const { registerAuditTrail } = require('./common/audit');
 const registerProjectHandlers = require('./projects/handlers');
-const registerTimesheetHandlers = require('./timesheets/handlers');
+const { registerEmployeeHandlers, registerApprovalHandlers } = require('./timesheets/handlers');
 const registerBillingHandlers = require('./billing/handlers');
+const registerAdminHandlers = require('./admin/handlers');
 
-module.exports = cds.service.impl(async function () {
-  const {
-    Projects,
-    Budgets,
-    Clients,
-    Milestones,
-    Tasks,
-    Timesheets,
-    TimesheetEntries,
-    Invoices,
-    InvoiceLines,
-    InvoiceSourceLinks,
-    AuditLog
-  } = cds.entities('psa');
+// Thin registrar: every service in psa-services.cds uses this impl, and the
+// domain modules under srv/<domain>/ register the handlers for their service.
+const registrars = {
+  UserService: srv => srv.on('me', req => {
+    const { user } = req;
+    return {
+      id: user.id,
+      email: user.attr.email || (user.id.includes('@') ? user.id : null),
+      name: user.attr.employeeName || [user.attr.givenName, user.attr.familyName].filter(Boolean).join(' ') || user.id,
+      employeeId: user.attr.employeeId || null,
+      departmentId: user.attr.departmentId || null,
+      isManager: !!user.attr.isManager,
+      roles: ['EmployeeRole', 'ManagerRole', 'FinanceRole', 'DeptHeadRole', 'AdminRole'].filter(r => user.is(r))
+    };
+  }),
+  EmployeeService: registerEmployeeHandlers,
+  ProjectService: srv => { registerProjectHandlers(srv); registerApprovalHandlers(srv); },
+  BillingService: registerBillingHandlers,
+  PortfolioService: () => {},
+  AdminService: registerAdminHandlers
+};
 
-  // Shared audit helper. Domain handlers receive it as a dependency so audit
-  // persistence stays consistent while business rules live in domain modules.
-  const audit = async (req, entityName, recordID, action, oldValues, newValues) => {
-    const tx = cds.tx(req);
-    await tx.run(cds.ql.INSERT.into(AuditLog).entries({
-      entity_name: entityName,
-      record_id: String(recordID || ''),
-      action,
-      actor: req.user?.id || 'unknown',
-      changed_at: new Date().toISOString(),
-      old_values: oldValues ? JSON.stringify(oldValues) : null,
-      new_values: newValues ? JSON.stringify(newValues) : null
-    }));
-  };
-
-  registerProjectHandlers({
-    service: this, Projects, Budgets, Milestones, Tasks, Timesheets, TimesheetEntries, audit
-  });
-  registerTimesheetHandlers({
-    service: this, Timesheets, TimesheetEntries, Tasks, audit
-  });
-  registerBillingHandlers({
-    service: this, Projects, Budgets, Clients, Timesheets, TimesheetEntries,
-    Invoices, InvoiceLines, InvoiceSourceLinks, audit
-  });
+module.exports = cds.service.impl(function () {
+  if (this.name !== 'UserService') registerAuditTrail(this);
+  registrars[this.name]?.(this);
 });

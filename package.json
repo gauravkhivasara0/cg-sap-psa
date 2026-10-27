@@ -1,29 +1,91 @@
 {
   "name": "psa",
   "version": "1.0.0",
-  "description": "Welcome to your new CAP project.",
+  "description": "Enterprise Professional Services Automation (PSA) on SAP BTP - CAP + Fiori Elements",
   "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "cds-serve",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "watch": "cds watch",
+    "test": "node --test --test-concurrency=1 test/*.test.js"
   },
   "dependencies": {
     "@cap-js/hana": "^3",
     "@sap/cds": "^10.2.1",
-    "@sap/cds-dk": "^10.2.0",
     "@sap/xssec": "^4"
+  },
+  "devDependencies": {
+    "@cap-js/cds-test": "^1.0.2",
+    "@cap-js/sqlite": "^3.1.2",
+    "@sap/cds-dk": "^10"
   },
   "cds": {
     "requires": {
+      "[development]": {
+        "db": {
+          "kind": "sqlite",
+          "credentials": {
+            "url": ":memory:"
+          }
+        },
+        "auth": {
+          "kind": "mocked",
+          "users": {
+            "alice.admin@example.test": {
+              "password": "pass",
+              "roles": [
+                "AdminRole"
+              ]
+            },
+            "morgan.manager@example.test": {
+              "password": "pass",
+              "roles": [
+                "ManagerRole",
+                "EmployeeRole",
+                "DeptHeadRole"
+              ]
+            },
+            "taylor.engineer@example.test": {
+              "password": "pass",
+              "roles": [
+                "EmployeeRole"
+              ]
+            },
+            "jordan.consultant@example.test": {
+              "password": "pass",
+              "roles": [
+                "EmployeeRole"
+              ]
+            },
+            "casey.lead@example.test": {
+              "password": "pass",
+              "roles": [
+                "ManagerRole",
+                "DeptHeadRole",
+                "EmployeeRole"
+              ]
+            },
+            "fiona.finance@example.test": {
+              "password": "pass",
+              "roles": [
+                "FinanceRole"
+              ]
+            },
+            "nobody@example.test": {
+              "password": "pass",
+              "roles": []
+            },
+            "*": false
+          }
+        }
+      },
       "[production]": {
+        "db": "hana",
         "auth": "xsuaa"
       }
+    },
+    "sql": {
+      "native_hana_associations": false
     }
-  },
-  "devDependencies": {
-    "@sap/cds-dk": "^10"
   }
 }

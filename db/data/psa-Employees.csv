@@ -2,3 +2,4 @@ ID;employee_code;external_hr_id;identity_subject;full_name;email;is_manager;is_a
 30000000-0000-4000-8000-000000000001;EMP-001;DEMO-HR-001;demo-manager-001;Morgan Manager;morgan.manager@example.test;true;true;20000000-0000-4000-8000-000000000001;
 30000000-0000-4000-8000-000000000002;EMP-002;DEMO-HR-002;demo-employee-002;Taylor Engineer;taylor.engineer@example.test;false;true;20000000-0000-4000-8000-000000000001;30000000-0000-4000-8000-000000000001
 30000000-0000-4000-8000-000000000003;EMP-003;DEMO-HR-003;demo-consultant-003;Jordan Consultant;jordan.consultant@example.test;false;true;20000000-0000-4000-8000-000000000002;30000000-0000-4000-8000-000000000001
+30000000-0000-4000-8000-000000000004;EMP-004;DEMO-HR-004;demo-depthead-004;Casey Lead;casey.lead@example.test;true;true;20000000-0000-4000-8000-000000000002;

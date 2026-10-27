@@ -1,6 +1,14 @@
 namespace psa;
-using { cuid, managed } from '@sap/cds/common';
+using { cuid, managed, sap.common.CodeList } from '@sap/cds/common';
 
+// Code lists used for value help / validation of status-like fields.
+entity BillingTypes : CodeList { key code : String(10); }
+entity ProjectStatuses : CodeList { key code : String(15); }
+entity TaskStatuses : CodeList { key code : String(15); }
+entity Priorities : CodeList { key code : String(10); }
+
+
+@assert.unique: { client_code: [client_code] }
 entity Clients : cuid, managed {
   client_code : String(20) @mandatory;
   client_name : String(100) @mandatory;
@@ -11,6 +19,7 @@ entity Clients : cuid, managed {
   projects : Association to many Projects on projects.client = $self;
   invoices : Association to many Invoices on invoices.client = $self;
 }
+@assert.unique: { department_name: [department_name] }
 entity Departments : cuid, managed {
   department_code : String(20);
   department_name : String(100) @mandatory;
@@ -18,12 +27,13 @@ entity Departments : cuid, managed {
   head : Association to Employees;
   employees : Association to many Employees on employees.department = $self;
 }
+@assert.unique: { email: [email], employee_code: [employee_code] }
 entity Employees : cuid, managed {
   employee_code : String(30) @mandatory;
   external_hr_id : String(100); // TODO(CONFIG): map to authoritative HR employee key.
   identity_subject : String(255); // TODO(CONFIG): map trusted IdP subject server-side; never accept from client.
   full_name : String(120) @mandatory;
-  email : String(254) @mandatory;
+  email : String(254) @mandatory; // Must equal the user's BTP login e-mail; used to map XSUAA users to employees.
   is_manager : Boolean default false;
   is_active : Boolean default true;
   department : Association to Departments;
@@ -32,6 +42,7 @@ entity Employees : cuid, managed {
   managed_projects : Association to many Projects on managed_projects.manager = $self;
   approvals : Association to many Timesheets on approvals.approvedBy = $self;
 }
+@assert.unique: { project_code: [project_code] }
 entity Projects : cuid, managed {
   project_code : String(20) @mandatory;
   project_name : String(100) @mandatory;
@@ -47,12 +58,13 @@ entity Projects : cuid, managed {
   fixed_fee_amt : Decimal(15,2);
   retainer_fee_amt : Decimal(15,2);
   retainer_period : String(20); // TODO(CONFIG): confirm allowed billing periods.
-  budget : Association to one Budgets;
+  budget : Composition of one Budgets on budget.project = $self;
   milestones : Composition of many Milestones on milestones.project = $self;
   tasks : Association to many Tasks on tasks.project = $self;
   timesheets : Association to many Timesheets on timesheets.project = $self;
   invoices : Association to many Invoices on invoices.project = $self;
 }
+@assert.unique: { project: [project] }
 entity Budgets : cuid, managed {
   project : Association to one Projects @mandatory;
   budget_amt : Decimal(15,2) @mandatory;
@@ -76,7 +88,7 @@ entity Milestones : cuid, managed {
   tasks : Composition of many Tasks on tasks.milestone = $self;
 }
 entity Tasks : cuid, managed {
-  project : Association to one Projects @mandatory;
+  project : Association to one Projects; // Derived from milestone.project server-side.
   milestone : Association to one Milestones @mandatory;
   task_name : String(100) @mandatory;
   description : String(500);
