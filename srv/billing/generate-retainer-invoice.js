@@ -21,7 +21,7 @@ module.exports = async function generateRetainerInvoice({ req, tx, entities, aud
 
   const project = await tx.run(cds.ql.SELECT.one.from(Projects).where({ ID: projectID }));
   if (!project) return req.reject(404, 'Project not found.');
-  if (!['RET', 'RETAINER', 'Retainer', 'retainer'].includes(project.billing_type)) {
+  if (String(project.billing_type || '').toUpperCase() !== 'RETAINER' && String(project.billing_type || '').toUpperCase() !== 'RET') {
     return req.reject(400, 'This project is not configured for Retainer billing.');
   }
   const fee = Number(project.retainer_fee_amt);
