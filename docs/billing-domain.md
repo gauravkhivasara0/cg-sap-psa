@@ -30,39 +30,37 @@ The service implementation file now exports separate implementations for the ser
 - The annual reset uses UTC calendar year. If Finance requires a local timezone, legal entity, or fiscal-year numbering, confirm it before production.
 - Source-only implementation: no build, test, or runtime verification has been run yet.
 
-## Current T&M flow
+## Invoice generation
 
-1. Finance requests invoice generation with a project and inclusive period start/end.
-2. The handler validates real calendar dates and period order, confirms the project is T&M, loads its client and budget, and checks the budget rate/currency.
-3. It selects only Approved timesheets and billable entries whose actual work date is in the requested period.
-4. It rejects the request if a source entry already has an invoice source link.
-5. It creates a Draft invoice, snapshots client/project names, creates a line per source entry, and links each line to its source entry.
-6. Every financial action writes an audit record through the existing audit helper.
+The BillingService `generateInvoice` action dispatches by the project's `billing_type`:
+
+- **T&M**: bills Approved billable timesheet entries in the requested work-date period and links each line to its source entry.
+- **Fixed**: bills milestones only when `status = 'Completed'` and `is_billable = true`. Each milestone must have a positive `fixed_fee_amt`; each line links to its milestone.
+- **Retainer**: bills `Projects.retainer_fee_amt` once for a complete calendar month. The source key is project plus year/month, preventing a second invoice for that month.
+
+All three create Draft invoices and use the project budget's currency. Tax remains provisionally zero until an approved tax configuration is supplied. Source keys have a database uniqueness constraint to protect against duplicate links, including simultaneous requests.
 
 ## Lifecycle controls
 
 - Issue requires a Draft invoice, at least one line, a valid three-letter currency, and non-negative finite line totals.
-- Issue stores issue/due dates and marks the invoice snapshot immutable. The current due-date default is 30 calendar days and still requires Finance confirmation.
-- Payment requires an Issued or Overdue invoice and a real calendar date in `YYYY-MM-DD` format.
-- Existing service guards prevent direct financial-field edits after issue and prevent invoice-line create/update/delete against an issued invoice.
+- Issue stores issue/due dates and marks the issued snapshot immutable. The 30-calendar-day due-date default still requires Finance confirmation.
+- Payment requires an Issued or Overdue invoice and a real calendar date.
+- Issued invoice financial fields and lines are protected from direct changes.
+- Draft invoices can be cancelled with a reason. Cancellation preserves the invoice header and an audit record of its former lines, then removes active lines/source links so those sources can be invoiced again. Issued invoices cannot be cancelled through this action.
 
-## Known gaps — do not treat billing as production-ready
+## Invoice PDF
 
-1. **Invoice numbering:** database-backed, serialized numbering has been implemented in source; it still requires an approved build/runtime verification and deployment of the counter seed row.
-2. **Tax:** the current zero-tax calculation is provisional only. A Finance-approved tax configuration, jurisdiction, inclusive/exclusive rules, and rounding policy are not supplied. Do not interpret zero as a tax determination.
-3. **Fixed billing:** eligible milestone status, milestone fee source, partial milestone invoicing, and contract-specific rules need confirmation before implementing the generator.
-4. **Retainer billing:** allowed period values, billing calendar, proration, and duplicate-period key rules need confirmation before implementing the generator.
-5. **Duplicate-billing race:** source links are checked before draft creation, but there is no database uniqueness/concurrency guarantee. Two simultaneous requests could race until a database-level control is added.
-6. **Cancellation and reversals:** cancelling a draft and releasing its source links, and handling issued-invoice credit/reversal flows, are not implemented.
-7. **Real email:** issue/payment notifications need the approved provider and secure BTP configuration. Do not replace this with a mock sender.
-8. **PDF:** on-demand PDF generation and a stable issued snapshot remain to be implemented.
+The `downloadInvoicePdf(invoiceID)` action creates a PDF on demand using `pdf-lib`. It only accepts issued invoices and reads the stored invoice header and lines, including the client/project name snapshots and stored amounts. It does not save a permanent PDF copy. The returned OData binary value can be converted to a downloadable PDF by the client app. Standard built-in PDF fonts are used for a simple MVP layout; unusual non-Latin characters may need a later embedded-font improvement.
 
-## Next safe implementation order
+## Remaining gaps — not production-ready
 
-1. Obtain approved tax rules and block issue where required configuration is absent.
-2. Confirm fixed-fee milestone eligibility and retainer period semantics, then implement each as a separate module with source keys.
-3. Design draft cancellation/source-link release and issued-invoice reversal/credit-note policy.
-4. Connect real email after the provider configuration is supplied.
-5. Implement PDF generation from stored issued values.
+1. Tax rules are not configured; zero tax is provisional and must not be treated as a tax determination.
+2. The invoice-number counter locking strategy still needs database-specific concurrency verification.
+3. Invoice numbering's UTC calendar-year reset and 30-day due-date term require Finance confirmation.
+4. Cancellation/reversal of issued invoices needs a credit-note or reversal policy; only draft cancellation is implemented.
+5. Real email notifications need an approved provider and secure BTP configuration.
+6. PDF output and all billing behavior still need an approved verification step before deployment.
 
-No tests, build, or runtime checks have been run for the current changes. Ask the developer before any verification commands.
+## Verification status
+
+Source changes only. No tests, builds, runtime checks, or database deployment were run as part of this increment. Ask before any such verification.
