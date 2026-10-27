@@ -111,28 +111,43 @@ annotate service.Invoices with @(
     UI.LineItem : [
         {
             $Type : 'UI.DataField',
-            Label : 'invoice_number',
+            Label : 'Invoice Number',
             Value : invoice_number,
         },
         {
             $Type : 'UI.DataField',
-            Label : 'invoice_date',
+            Label : 'Client',
+            Value : client_name_snapshot,
+        },
+        {
+            $Type : 'UI.DataField',
+            Label : 'Project',
+            Value : project_name_snapshot,
+        },
+        {
+            $Type : 'UI.DataField',
+            Label : 'Invoice Date',
             Value : invoice_date,
         },
         {
             $Type : 'UI.DataField',
-            Label : 'due_date',
+            Label : 'Due Date',
             Value : due_date,
         },
         {
             $Type : 'UI.DataField',
-            Label : 'period_from',
-            Value : period_from,
+            Label : 'Total',
+            Value : total_amt,
         },
         {
             $Type : 'UI.DataField',
-            Label : 'period_to',
-            Value : period_to,
+            Label : 'Currency',
+            Value : currency_code,
+        },
+        {
+            $Type : 'UI.DataField',
+            Label : 'Payment Status',
+            Value : payment_status,
         },
     ],
 );
