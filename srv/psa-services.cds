@@ -93,6 +93,8 @@ service ProjectService {
   @readonly entity BillingTypes as projection on db.BillingTypes;
   @readonly entity ProjectStatuses as projection on db.ProjectStatuses;
   @readonly entity TaskStatuses as projection on db.TaskStatuses;
+  @readonly entity MilestoneStatuses as projection on db.MilestoneStatuses;
+  @readonly entity TimesheetStatuses as projection on db.TimesheetStatuses;
   @readonly entity Priorities as projection on db.Priorities;
 
   type BurnSummary {

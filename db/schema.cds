@@ -5,6 +5,8 @@ using { cuid, managed, sap.common.CodeList } from '@sap/cds/common';
 entity BillingTypes : CodeList { key code : String(10); }
 entity ProjectStatuses : CodeList { key code : String(15); }
 entity TaskStatuses : CodeList { key code : String(15); }
+entity MilestoneStatuses : CodeList { key code : String(15); }
+entity TimesheetStatuses : CodeList { key code : String(10); }
 entity Priorities : CodeList { key code : String(10); }
 
 
@@ -73,6 +75,9 @@ entity Budgets : cuid, managed {
   billing_rate_hr : Decimal(15,2) @mandatory;
   budget_status : String(15) default 'Within Budget';
   currency_code : String(3) @mandatory;
+  // UI criticality: 3 = positive, 2 = critical, 1 = negative
+  statusCriticality : Integer = case budget_status when 'Within Budget' then 3 when 'Warning' then 2 when 'At Risk' then 2 when 'Breached' then 1 else 0 end;
+  consumed_pct : Decimal(7,2) = case when budget_amt > 0 then consumed_amt * 100 / budget_amt else 0 end;
 }
 entity Milestones : cuid, managed {
   project : Association to one Projects @mandatory;
@@ -98,6 +103,9 @@ entity Tasks : cuid, managed {
   status : String(15) default 'To Do';
   estimated_hours : Decimal(10,2) @mandatory;
   actual_hours : Decimal(10,2) default 0; // Official actuals count Approved entries only.
+  // FR-008: warning at 80 %, error at 100 % of the estimate
+  burn_pct : Decimal(7,2) = case when estimated_hours > 0 then actual_hours * 100 / estimated_hours else 0 end;
+  burnCriticality : Integer = case when estimated_hours > 0 and actual_hours >= estimated_hours then 1 when estimated_hours > 0 and actual_hours >= estimated_hours * 0.8 then 2 else 3 end;
   timesheetEntries : Association to many TimesheetEntries on timesheetEntries.task = $self;
 }
 entity Timesheets : cuid, managed {
@@ -111,6 +119,8 @@ entity Timesheets : cuid, managed {
   approved_date : Date;
   status : String(10) default 'Draft';
   rejection_reason : String(255);
+  statusCriticality : Integer = case status when 'Approved' then 3 when 'Invoiced' then 3 when 'Submitted' then 2 when 'Rejected' then 1 else 0 end;
+  locked : Boolean = case when status = 'Draft' or status = 'Rejected' then false else true end;
   entries : Composition of many TimesheetEntries on entries.timesheet = $self;
 }
 entity TimesheetEntries : cuid, managed {
@@ -136,6 +146,7 @@ entity Invoices : cuid, managed {
   tax_rate : Decimal(5,2) default 0;
   currency_code : String(3) @mandatory;
   payment_status : String(10) default 'Draft';
+  statusCriticality : Integer = case payment_status when 'Paid' then 3 when 'Issued' then 2 when 'Cancelled' then 1 else 0 end;
   issued_at : Timestamp;
   paid_at : Timestamp;
   cancelled_at : Timestamp;

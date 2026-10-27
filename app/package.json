@@ -1,0 +1,15 @@
+{
+  "name": "psa-approuter",
+  "version": "1.0.0",
+  "description": "Standalone application router for the PSA app: XSUAA login, static Fiori apps, /odata proxy to the CAP service",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/@sap/approuter/approuter.js"
+  },
+  "dependencies": {
+    "@sap/approuter": "^23"
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
+  }
+}

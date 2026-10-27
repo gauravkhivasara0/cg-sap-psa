@@ -1,0 +1,16 @@
+/* Shared header for the standalone PSA apps */
+html, body { height: 100%; margin: 0; }
+body { display: flex; flex-direction: column; }
+#psa-shell {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 1rem;
+  height: 2.75rem; padding: 0 1rem; box-sizing: border-box;
+  background: #354a5f; color: #fff;
+  font-family: "72", "72full", Arial, Helvetica, sans-serif; font-size: 0.875rem;
+}
+#psa-shell a { color: #fff; text-decoration: none; }
+#psa-shell a:hover { text-decoration: underline; }
+#psa-shell .psa-brand { font-weight: bold; }
+#psa-shell .psa-title { flex: 1; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#psa-shell .psa-user { opacity: 0.85; white-space: nowrap; }
+#psa-content { flex: 1 1 auto; min-height: 0; }
+@media (max-width: 600px) { #psa-shell .psa-user { display: none; } }

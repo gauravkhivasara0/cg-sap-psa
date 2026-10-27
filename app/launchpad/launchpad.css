@@ -1,0 +1,30 @@
+:root {
+  --lp-bg: #f5f6f7; --lp-card: #fff; --lp-text: #1d2d3e; --lp-muted: #556b82;
+  --lp-accent: #0a6ed1; --lp-border: #d9dee3; --lp-shell: #354a5f;
+  --lp-warn-bg: #fef7f1; --lp-warn: #aa5b00; --lp-err-bg: #ffeaf4; --lp-err: #aa0808;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--lp-bg); color: var(--lp-text); font-family: "72", "72full", Arial, Helvetica, sans-serif; }
+.lp-header { display: flex; align-items: center; gap: 1rem; height: 3rem; padding: 0 1rem; background: var(--lp-shell); color: #fff; }
+.lp-brand { font-weight: bold; flex: 1; }
+.lp-user { opacity: .85; font-size: .875rem; }
+.lp-logout { color: #fff; font-size: .875rem; }
+.lp-main { max-width: 72rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+.lp-center { text-align: center; padding-top: 4rem; }
+h1 { font-size: 1.5rem; font-weight: normal; margin: 0 0 .25rem; }
+h2 { font-size: 1rem; color: var(--lp-muted); font-weight: bold; margin: 2rem 0 .75rem; text-transform: uppercase; letter-spacing: .03em; }
+.lp-roles { color: var(--lp-muted); margin: 0 0 1rem; font-size: .875rem; }
+.lp-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 1rem; }
+.lp-tile { display: flex; flex-direction: column; justify-content: space-between; min-height: 9rem; padding: 1rem;
+  background: var(--lp-card); border: 1px solid var(--lp-border); border-radius: .75rem; color: inherit; text-decoration: none;
+  box-shadow: 0 0 .125rem rgba(34,53,72,.15); transition: box-shadow .15s; }
+.lp-tile:hover, .lp-tile:focus-visible { box-shadow: 0 0 0 2px var(--lp-accent); outline: none; }
+.lp-tile-title { font-weight: bold; font-size: 1rem; }
+.lp-tile-sub { color: var(--lp-muted); font-size: .8125rem; margin-top: .25rem; }
+.lp-tile-kpi { font-size: 2rem; color: var(--lp-accent); }
+.lp-tile-kpi small { font-size: .75rem; color: var(--lp-muted); margin-left: .25rem; }
+.lp-msg { padding: .75rem 1rem; border-radius: .5rem; margin: .75rem 0; border: 1px solid; line-height: 1.4; }
+.lp-msg.warn { background: var(--lp-warn-bg); color: var(--lp-warn); border-color: #f4d4b4; }
+.lp-msg.err { background: var(--lp-err-bg); color: var(--lp-err); border-color: #f5b5c5; }
+.lp-button { display: inline-block; padding: .5rem 1rem; border-radius: .5rem; background: var(--lp-accent); color: #fff; text-decoration: none; }
+@media (max-width: 600px) { .lp-user { display: none; } .lp-tiles { grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); } }

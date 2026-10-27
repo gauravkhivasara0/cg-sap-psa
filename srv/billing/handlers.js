@@ -32,7 +32,7 @@ module.exports = function registerBillingHandlers(srv) {
   srv.after('READ', Invoices, rows => {
     const today = new Date().toISOString().slice(0, 10);
     for (const r of Array.isArray(rows) ? rows : [rows]) {
-      if (r?.payment_status === 'Issued' && r.due_date && r.due_date < today) r.payment_status = 'Overdue';
+      if (r?.payment_status === 'Issued' && r.due_date && r.due_date < today) { r.payment_status = 'Overdue'; r.statusCriticality = 1; }
     }
   });
 };

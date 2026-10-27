@@ -1,0 +1,30 @@
+{
+  "welcomeFile": "/launchpad/index.html",
+  "authenticationMethod": "route",
+  "logout": {
+    "logoutEndpoint": "/do/logout",
+    "logoutPage": "/launchpad/logout.html"
+  },
+  "routes": [
+    {
+      "source": "^/launchpad/(logout\\.html|launchpad\\.css)$",
+      "target": "launchpad/$1",
+      "localDir": ".",
+      "authenticationType": "none"
+    },
+    {
+      "source": "^/odata/(.*)$",
+      "target": "/odata/$1",
+      "destination": "srv-api",
+      "authenticationType": "xsuaa",
+      "csrfProtection": true
+    },
+    {
+      "source": "^/((?:launchpad|timesheets|approvals|projects|invoices|portfolio|employees|clients|departments)/.*)$",
+      "target": "$1",
+      "localDir": ".",
+      "authenticationType": "xsuaa",
+      "cacheControl": "no-cache, no-store, must-revalidate"
+    }
+  ]
+}
