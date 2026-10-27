@@ -5,7 +5,7 @@ module.exports = async function generateFixedFeeInvoice({ req, tx, entities, aud
   const { projectID, periodFrom, periodTo } = req.data;
   const project = await tx.run(cds.ql.SELECT.one.from(Projects).where({ ID: projectID }));
   if (!project) return req.reject(404, 'Project not found.');
-  if (!['FIXED', 'Fixed', 'fixed'].includes(project.billing_type)) {
+  if (String(project.billing_type || '').toUpperCase() !== 'FIXED') {
     return req.reject(400, 'This project is not configured for Fixed billing.');
   }
   const datePattern = /^\d{4}-\d{2}-\d{2}$/;
