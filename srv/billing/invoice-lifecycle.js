@@ -76,6 +76,35 @@ module.exports = {
     return { ID: invoiceID, invoice_number: invoiceNumber, payment_status: 'Issued', due_date: dueDateString };
   },
 
+
+  async cancelDraftInvoice({ req, tx, Invoices, InvoiceLines, InvoiceSourceLinks, audit }) {
+    const { invoiceID, reason } = req.data;
+    if (!reason || !String(reason).trim()) return req.reject(400, 'A cancellation reason is required.');
+    const invoice = await tx.run(cds.ql.SELECT.one.from(Invoices).where({ ID: invoiceID }));
+    if (!invoice) return req.reject(404, 'Invoice not found.');
+    if (invoice.payment_status !== 'Draft') return req.reject(409, 'Only Draft invoices can be cancelled.');
+
+    const lines = await tx.run(cds.ql.SELECT.from(InvoiceLines).where({ invoice_ID: invoiceID }));
+    const lineIDs = lines.map(line => line.ID);
+    if (lineIDs.length) {
+      await tx.run(cds.ql.DELETE.from(InvoiceSourceLinks).where({ invoiceLine_ID: { in: lineIDs } }));
+      await tx.run(cds.ql.DELETE.from(InvoiceLines).where({ invoice_ID: invoiceID }));
+    }
+    const cancelledAt = new Date().toISOString();
+    await tx.run(cds.ql.UPDATE(Invoices).set({
+      payment_status: 'Cancelled',
+      cancelled_at: cancelledAt,
+      cancellation_reason: String(reason).trim()
+    }).where({ ID: invoiceID }));
+    await audit(req, 'Invoices', invoiceID, 'CANCEL_DRAFT', {
+      payment_status: 'Draft', lineCount: lines.length, lines
+    }, {
+      payment_status: 'Cancelled', cancelled_at: cancelledAt,
+      cancellation_reason: String(reason).trim()
+    });
+    return { ID: invoiceID, payment_status: 'Cancelled' };
+  },
+
   async markInvoicePaid({ req, tx, Invoices, audit }) {
     const { invoiceID, paymentDate } = req.data;
     if (!paymentDate || !/^\d{4}-\d{2}-\d{2}$/.test(String(paymentDate)) || Number.isNaN(Date.parse(String(paymentDate) + 'T00:00:00Z'))) {
