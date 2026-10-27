@@ -14,7 +14,8 @@
     "@cap-js/hana": "^3",
     "@sap/cds": "^10.2.1",
     "@sap/cds-dk": "^10.2.0",
-    "@sap/xssec": "^4"
+    "@sap/xssec": "^4",
+    "pdf-lib": "^1.17.1"
   },
   "cds": {
     "requires": {
