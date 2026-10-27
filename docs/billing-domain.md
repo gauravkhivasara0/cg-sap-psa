@@ -38,7 +38,7 @@ The BillingService `generateInvoice` action dispatches by the project's `billing
 - **Fixed**: bills milestones only when `status = 'Completed'` and `is_billable = true`. Each milestone must have a positive `fixed_fee_amt`; each line links to its milestone.
 - **Retainer**: bills `Projects.retainer_fee_amt` once for a complete calendar month. The source key is project plus year/month, preventing a second invoice for that month.
 
-All three create Draft invoices and use the project budget's currency. Tax remains provisionally zero until an approved tax configuration is supplied. Source keys have a database uniqueness constraint to protect against duplicate links, including simultaneous requests.
+All three create Draft invoices and use the project budget's currency. Tax uses development-only illustrative project rates of 0%, 5%, 12%, or 18%; the project field defaults to 18%. These are not legal or jurisdiction-specific tax advice and must be replaced with Finance-approved rules before production. Source keys have a database uniqueness constraint to protect against duplicate links, including simultaneous requests.
 
 ## Lifecycle controls
 
@@ -50,11 +50,11 @@ All three create Draft invoices and use the project budget's currency. Tax remai
 
 ## Invoice PDF
 
-The `downloadInvoicePdf(invoiceID)` action creates a PDF on demand using `pdf-lib`. It only accepts issued invoices and reads the stored invoice header and lines, including the client/project name snapshots and stored amounts. It does not save a permanent PDF copy. The returned OData binary value can be converted to a downloadable PDF by the client app. Standard built-in PDF fonts are used for a simple MVP layout; unusual non-Latin characters may need a later embedded-font improvement.
+The `downloadInvoicePdf(invoiceID)` action creates a PDF on demand using `pdf-lib`. It only accepts issued invoices and reads the stored invoice header and lines, including the client/project name snapshots and stored amounts. It does not save a permanent PDF copy. The returned OData binary value must be handled by the client app to trigger a browser download. The PDF uses a structured heading, invoice metadata, item table, subtotal/tax/total summary, and page breaks. Standard built-in PDF fonts are used; unusual non-Latin characters may need an embedded font later. The repository currently has only Fiori annotations and no app manifest/controller/view, so the actual download button still needs UI code.
 
 ## Remaining gaps — not production-ready
 
-1. Tax rules are not configured; zero tax is provisional and must not be treated as a tax determination.
+1. Tax rates are development-only examples (0%, 5%, 12%, 18%); Finance must approve jurisdiction-specific rules before production.
 2. The invoice-number counter locking strategy still needs database-specific concurrency verification.
 3. Invoice numbering's UTC calendar-year reset and 30-day due-date term require Finance confirmation.
 4. Cancellation/reversal of issued invoices needs a credit-note or reversal policy; only draft cancellation is implemented.
