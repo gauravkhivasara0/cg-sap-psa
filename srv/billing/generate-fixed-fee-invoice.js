@@ -1,4 +1,5 @@
 const cds = require('@sap/cds');
+const getSampleTaxRate = require('./tax-rules');
 
 module.exports = async function generateFixedFeeInvoice({ req, tx, entities, audit }) {
   const { Projects, Budgets, Clients, Milestones, Invoices, InvoiceLines, InvoiceSourceLinks } = entities;
@@ -37,6 +38,7 @@ module.exports = async function generateFixedFeeInvoice({ req, tx, entities, aud
     return req.reject(400, 'Every eligible milestone must have a configured fee greater than zero.');
   }
 
+  const taxRate = getSampleTaxRate(project.tax_rate, req);
   const invoiceID = cds.utils.uuid();
   const invoiceDate = new Date().toISOString().slice(0, 10);
   const lines = eligible.map(milestone => ({
@@ -47,16 +49,17 @@ module.exports = async function generateFixedFeeInvoice({ req, tx, entities, aud
     quantity: 1,
     unit_price: Number(milestone.fixed_fee_amt),
     line_subtotal: Math.round(Number(milestone.fixed_fee_amt) * 100) / 100,
-    tax_rate: 0,
-    tax_amt: 0,
-    line_total: Math.round(Number(milestone.fixed_fee_amt) * 100) / 100
+    tax_rate: taxRate,
+    tax_amt: Math.round(Math.round(Number(milestone.fixed_fee_amt) * 100) / 100 * taxRate) / 100,
+    line_total: Math.round(Math.round(Number(milestone.fixed_fee_amt) * 100) / 100 * (1 + taxRate / 100) * 100) / 100
   }));
   const subtotal = Math.round(lines.reduce((sum, line) => sum + line.line_subtotal, 0) * 100) / 100;
+  const taxAmount = Math.round(lines.reduce((sum, line) => sum + line.tax_amt, 0) * 100) / 100;
 
   await tx.run(cds.ql.INSERT.into(Invoices).entries({
     ID: invoiceID, client_ID: project.client_ID, project_ID: projectID,
     invoice_date: invoiceDate, period_from: periodFrom, period_to: periodTo,
-    billable_hours: 0, subtotal_amt: subtotal, tax_amt: 0, tax_rate: 0, total_amt: subtotal,
+    billable_hours: 0, subtotal_amt: subtotal, tax_amt: taxAmount, tax_rate: taxRate, total_amt: Math.round((subtotal + taxAmount) * 100) / 100,
     currency_code: budget.currency_code, payment_status: 'Draft',
     client_name_snapshot: client.client_name, project_name_snapshot: project.project_name,
     immutable_on_issue: false
