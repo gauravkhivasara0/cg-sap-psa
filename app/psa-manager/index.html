@@ -9,10 +9,12 @@
     data-sap-ui-theme="sap_horizon"
     data-sap-ui-async="true"
     data-sap-ui-compatVersion="edge"
-    data-sap-ui-oninit="module:psa.billing/Component"
+    data-sap-ui-oninit="module:sap/ui/core/ComponentSupport"
     data-sap-ui-resourceRoots='{"psa.billing":"./"}'
     data-sap-ui-libs="sap.m,sap.ui.layout">
   </script>
 </head>
-<body class="sapUiBody" id="content"></body>
+<body class="sapUiBody" id="content">
+  <div data-sap-ui-component data-name="psa.billing" data-id="psa-billing" data-settings='{"id":"psa.billing"}'></div>
+</body>
 </html>
