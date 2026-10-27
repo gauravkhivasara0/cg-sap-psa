@@ -8,7 +8,11 @@ module.exports = async function generateFixedFeeInvoice({ req, tx, entities, aud
   if (!['FIXED', 'Fixed', 'fixed'].includes(project.billing_type)) {
     return req.reject(400, 'This project is not configured for Fixed billing.');
   }
-  if (!periodFrom || !periodTo || String(periodTo) < String(periodFrom)) {
+  const datePattern = /^\\d{4}-\\d{2}-\\d{2}$/;
+  const realDate = value => datePattern.test(String(value)) &&
+    !Number.isNaN(Date.parse(String(value) + 'T00:00:00Z')) &&
+    new Date(String(value) + 'T00:00:00Z').toISOString().slice(0, 10) === String(value);
+  if (!realDate(periodFrom) || !realDate(periodTo) || periodTo < periodFrom) {
     return req.reject(400, 'A valid invoice period start and end are required.');
   }
 
