@@ -124,3 +124,13 @@ Do not commit secrets. If provider configuration is not available, do not silent
 - Do not store secrets or real external credentials in source control.
 - Do not claim the code is verified, tested or production-ready.
 - Explain proposed testing types, risks and commands in plain language and consult the user before creating or running tests.
+
+## Simplified billing increment (source changes only)
+
+- Added Fixed billing: only Completed, billable milestones with a positive configured fee can be invoiced. Each invoice line links to its milestone.
+- Added Retainer billing: one full calendar-month invoice per project using the configured project retainer fee. A project/month source key prevents duplicate monthly invoices.
+- Added a database uniqueness constraint for invoice source keys to strengthen duplicate-billing protection.
+- Added draft invoice cancellation with a required reason. It preserves the cancelled invoice header and audits the previous lines, then releases its source links so eligible sources can be invoiced again. Issued invoices cannot use this action.
+- Added on-demand PDF generation with `pdf-lib`, exposed through BillingService for issued invoices only. PDFs use saved invoice lines and header snapshots and are not permanently stored.
+- Added `pdf-lib` to package dependencies and the lockfile.
+- No tests, build, runtime checks, or database deployment were run. These changes remain source-only and must be reviewed/verified with the user's approval.
