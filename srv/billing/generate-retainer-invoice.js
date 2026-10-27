@@ -1,4 +1,5 @@
 const cds = require('@sap/cds');
+const getSampleTaxRate = require('./tax-rules');
 
 module.exports = async function generateRetainerInvoice({ req, tx, entities, audit }) {
   const { Projects, Budgets, Clients, Invoices, InvoiceLines, InvoiceSourceLinks } = entities;
@@ -37,14 +38,16 @@ module.exports = async function generateRetainerInvoice({ req, tx, entities, aud
   const existing = await tx.run(cds.ql.SELECT.one.from(InvoiceSourceLinks).where({ source_key: sourceKey }));
   if (existing) return req.reject(409, 'A retainer invoice already exists for this project and calendar month.');
 
+  const taxRate = getSampleTaxRate(project.tax_rate, req);
   const invoiceID = cds.utils.uuid();
   const lineID = cds.utils.uuid();
   const amount = Math.round(fee * 100) / 100;
+  const taxAmount = Math.round(amount * taxRate) / 100;
   const invoiceDate = new Date().toISOString().slice(0, 10);
   await tx.run(cds.ql.INSERT.into(Invoices).entries({
     ID: invoiceID, client_ID: project.client_ID, project_ID: projectID,
     invoice_date: invoiceDate, period_from: periodFrom, period_to: periodTo,
-    billable_hours: 0, subtotal_amt: amount, tax_amt: 0, tax_rate: 0, total_amt: amount,
+    billable_hours: 0, subtotal_amt: amount, tax_amt: taxAmount, tax_rate: taxRate, total_amt: Math.round((amount + taxAmount) * 100) / 100,
     currency_code: budget.currency_code, payment_status: 'Draft',
     client_name_snapshot: client.client_name, project_name_snapshot: project.project_name,
     immutable_on_issue: false
@@ -52,7 +55,7 @@ module.exports = async function generateRetainerInvoice({ req, tx, entities, aud
   await tx.run(cds.ql.INSERT.into(InvoiceLines).entries({
     ID: lineID, invoice_ID: invoiceID, description: 'Monthly retainer (' + year + '-' + String(month + 1).padStart(2, '0') + ')',
     source_type: 'Retainer', quantity: 1, unit_price: amount, line_subtotal: amount,
-    tax_rate: 0, tax_amt: 0, line_total: amount
+    tax_rate: taxRate, tax_amt: taxAmount, line_total: Math.round((amount + taxAmount) * 100) / 100
   }));
   await tx.run(cds.ql.INSERT.into(InvoiceSourceLinks).entries({
     ID: cds.utils.uuid(), invoiceLine_ID: lineID, source_key: sourceKey
