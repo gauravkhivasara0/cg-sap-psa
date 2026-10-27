@@ -46,6 +46,7 @@ entity Projects : cuid, managed {
   consumed_hours : Decimal(10,2) default 0;
   fixed_fee_amt : Decimal(15,2);
   retainer_fee_amt : Decimal(15,2);
+  tax_rate : Decimal(5,2) default 18; // TODO(CONFIG): illustrative sample only; configure after Finance approval.
   retainer_period : String(20); // TODO(CONFIG): confirm allowed billing periods.
   budget : Association to one Budgets;
   milestones : Composition of many Milestones on milestones.project = $self;
