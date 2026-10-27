@@ -48,7 +48,9 @@ service BillingService {
   entity InvoiceSourceLinks as projection on db.InvoiceSourceLinks;
   action generateInvoice(projectID: UUID, periodFrom: Date, periodTo: Date) returns UUID;
   action issueInvoice(invoiceID: UUID);
+  action cancelDraftInvoice(invoiceID: UUID, reason: String(255));
   action markInvoicePaid(invoiceID: UUID, paymentDate: Date);
+  action downloadInvoicePdf(invoiceID: UUID) returns LargeBinary;
   entity Clients as projection on db.Clients;
   @readonly entity Projects as projection on db.Projects;
   @readonly entity Timesheets as projection on db.Timesheets;
