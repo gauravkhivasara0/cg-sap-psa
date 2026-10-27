@@ -1,5 +1,5 @@
 const cds = require('@sap/cds');
-const { SELECT, UPDATE } = cds.ql;
+const { SELECT } = cds.ql;
 
 const generateTimeAndMaterialInvoice = require('./generate-time-and-material-invoice');
 const generateFixedFeeInvoice = require('./generate-fixed-fee-invoice');
@@ -46,7 +46,7 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     };
     const billingType = String(project.billing_type || '').toUpperCase();
     const options = { req, tx, entities, audit };
-    if (billingType === 'TM' || billingType === 'T&M' || billingType === 'TIMEANDMATERIAL') {
+    if (billingType === 'TM') {
       return generateTimeAndMaterialInvoice(options);
     }
     if (billingType === 'FIXED') return generateFixedFeeInvoice(options);
