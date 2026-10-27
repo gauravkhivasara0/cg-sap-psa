@@ -1,0 +1,87 @@
+<mvc:View
+  controllerName="com.psa.billing.psabilling.controller.App"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:form="sap.ui.layout.form"
+  displayBlock="true">
+  <App>
+    <Page title="PSA Billing" showNavButton="false">
+      <content>
+        <VBox class="sapUiMediumMargin" width="auto">
+          <Title text="Invoices" level="H1" />
+          <Text text="Review invoice status and download issued invoices as PDFs." class="sapUiSmallMarginBottom" />
+          <Toolbar>
+            <SearchField width="20rem" placeholder="Search invoice number, project or client" liveChange=".onSearch" />
+            <ToolbarSpacer />
+            <Button text="Refresh" icon="sap-icon://refresh" press=".onRefresh" />
+            <Button id="downloadButton" text="Download PDF" icon="sap-icon://download" type="Emphasized" press=".onDownloadPdf" />
+          </Toolbar>
+          <MessageStrip text="Only issued invoices can be downloaded. Access is controlled by your Finance role." type="Information" showIcon="true" class="sapUiSmallMarginTop sapUiSmallMarginBottom" />
+          <Table id="invoiceTable" mode="SingleSelectMaster" includeItemInSelection="true" growing="true" growingScrollToLoad="true" growingThreshold="30" busyIndicatorDelay="0" noDataText="No invoices found." selectionChange=".onSelectionChange">
+            <columns>
+              <Column><Text text="Invoice number" /></Column>
+              <Column><Text text="Project" /></Column>
+              <Column><Text text="Invoice date" /></Column>
+              <Column hAlign="End"><Text text="Total" /></Column>
+              <Column><Text text="Currency" /></Column>
+              <Column><Text text="Payment status" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem type="Active">
+                <cells>
+                  <ObjectIdentifier title="{invoice_number}" text="{client_name_snapshot}" />
+                  <Text text="{project_name_snapshot}" />
+                  <Text text="{invoice_date}" />
+                  <ObjectNumber number="{total_amt}" />
+                  <Text text="{currency_code}" />
+                  <ObjectStatus text="{payment_status}" state="{path: 'payment_status', formatter: '.formatStatusState'}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+          <Panel headerText="Selected invoice" expandable="true" expanded="true" class="sapUiMediumMarginTop">
+            <content>
+              <MessageStrip id="selectionMessage" text="Select an invoice row to see its details." type="Information" showIcon="true" showCloseButton="false" />
+              <form:SimpleForm id="invoiceDetails" editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="4" emptySpanXL="1" columnsXL="2" columnsL="2" columnsM="1" visible="false">
+                <Label text="Invoice number" /><Text text="{invoice_number}" />
+                <Label text="Client" /><Text text="{client_name_snapshot}" />
+                <Label text="Project" /><Text text="{project_name_snapshot}" />
+                <Label text="Invoice date" /><Text text="{invoice_date}" />
+                <Label text="Due date" /><Text text="{due_date}" />
+                <Label text="Billing period" /><Text text="{parts: [{path:'period_from'}, {path:'period_to'}], formatter: '.formatPeriod'}" />
+                <Label text="Subtotal" /><ObjectNumber number="{subtotal_amt}" />
+                <Label text="Tax rate (%)" /><Text text="{tax_rate}" />
+                <Label text="Tax amount" /><ObjectNumber number="{tax_amt}" />
+                <Label text="Total" /><ObjectNumber number="{total_amt}" emphasized="true" />
+                <Label text="Payment status" /><ObjectStatus text="{payment_status}" state="{path: 'payment_status', formatter: '.formatStatusState'}" />
+              </form:SimpleForm>
+              <Title text="Invoice lines" level="H3" class="sapUiMediumMarginTop" />
+              <Table id="invoiceLinesTable" visible="false" noDataText="No invoice lines available.">
+                <columns>
+                  <Column><Text text="Description" /></Column>
+                  <Column hAlign="End"><Text text="Quantity" /></Column>
+                  <Column hAlign="End"><Text text="Unit price" /></Column>
+                  <Column hAlign="End"><Text text="Subtotal" /></Column>
+                  <Column hAlign="End"><Text text="Tax" /></Column>
+                  <Column hAlign="End"><Text text="Line total" /></Column>
+                </columns>
+                <items>
+                  <ColumnListItem>
+                    <cells>
+                      <Text text="{description}" />
+                      <Text text="{quantity}" />
+                      <Text text="{unit_price}" />
+                      <Text text="{line_subtotal}" />
+                      <Text text="{tax_amt}" />
+                      <ObjectNumber number="{line_total}" />
+                    </cells>
+                  </ColumnListItem>
+                </items>
+              </Table>
+            </content>
+          </Panel>
+        </VBox>
+      </content>
+    </Page>
+  </App>
+</mvc:View>
