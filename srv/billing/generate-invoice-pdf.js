@@ -1,7 +1,8 @@
+const cds = require('@sap/cds');
 const { PDFDocument, StandardFonts } = require('pdf-lib');
 
 module.exports = async function generateInvoicePdf({ tx, Invoices, InvoiceLines, invoiceID, req }) {
-  const invoice = await tx.run(require('@sap/cds').ql.SELECT.one.from(Invoices).where({ ID: invoiceID }));
+  const invoice = await tx.run(cds.ql.SELECT.one.from(Invoices).where({ ID: invoiceID }));
   if (!invoice) return req.reject(404, 'Invoice not found.');
   if (!invoice.invoice_number || !invoice.issued_at || !invoice.immutable_on_issue) {
     return req.reject(409, 'Only issued invoices can be exported as a PDF.');
@@ -14,7 +15,6 @@ module.exports = async function generateInvoicePdf({ tx, Invoices, InvoiceLines,
   let page = pdf.addPage(pageSize);
   let y = 790;
   const left = 48;
-  const right = 547;
   const text = (value, x = left, size = 10, font = regular) => {
     page.drawText(String(value ?? ''), { x, y, size, font });
   };
