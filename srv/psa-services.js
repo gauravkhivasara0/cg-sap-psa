@@ -39,7 +39,7 @@ exports.EmployeeService = cds.service.impl(function () {
 
 exports.BillingService = cds.service.impl(function () {
   const {
-    Projects, Budgets, Clients, Timesheets, TimesheetEntries,
+    Projects, Budgets, Clients, Milestones, Timesheets, TimesheetEntries,
     Invoices, InvoiceLines, InvoiceSourceLinks
   } = cds.entities('psa');
 
@@ -48,6 +48,7 @@ exports.BillingService = cds.service.impl(function () {
     Projects,
     Budgets,
     Clients,
+    Milestones,
     Timesheets,
     TimesheetEntries,
     Invoices,
