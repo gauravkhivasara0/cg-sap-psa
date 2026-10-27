@@ -17,7 +17,8 @@ module.exports = function registerBillingHandlers({ service, Projects, Budgets, 
     if (!current?.immutable_on_issue) return;
     const frozen = ['client_ID', 'project_ID', 'invoice_number', 'invoice_date', 'due_date',
       'period_from', 'period_to', 'billable_hours', 'subtotal_amt', 'total_amt', 'tax_amt',
-      'tax_rate', 'currency_code', 'client_name_snapshot', 'project_name_snapshot'];
+      'tax_rate', 'currency_code', 'client_name_snapshot', 'project_name_snapshot',
+      'payment_status', 'issued_at', 'paid_at', 'cancelled_at', 'cancellation_reason', 'immutable_on_issue'];
     if (frozen.some(field => Object.prototype.hasOwnProperty.call(req.data, field))) {
       req.error(409, 'Issued invoice financial details are immutable.');
     }
