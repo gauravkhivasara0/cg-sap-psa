@@ -76,7 +76,7 @@ entity Budgets : cuid, managed {
   budget_status : String(15) default 'Within Budget';
   currency_code : String(3) @mandatory;
   // UI criticality: 3 = positive, 2 = critical, 1 = negative
-  statusCriticality : Integer = case budget_status when 'Within Budget' then 3 when 'Warning' then 2 when 'At Risk' then 2 when 'Breached' then 1 else 0 end;
+  statusCriticality : Integer = case when budget_status = 'Within Budget' then 3 when budget_status = 'Warning' then 2 when budget_status = 'At Risk' then 2 when budget_status = 'Breached' then 1 else 0 end;
   consumed_pct : Decimal(7,2) = case when budget_amt > 0 then consumed_amt * 100 / budget_amt else 0 end;
 }
 entity Milestones : cuid, managed {
@@ -119,7 +119,7 @@ entity Timesheets : cuid, managed {
   approved_date : Date;
   status : String(10) default 'Draft';
   rejection_reason : String(255);
-  statusCriticality : Integer = case status when 'Approved' then 3 when 'Invoiced' then 3 when 'Submitted' then 2 when 'Rejected' then 1 else 0 end;
+  statusCriticality : Integer = case when status = 'Approved' then 3 when status = 'Invoiced' then 3 when status = 'Submitted' then 2 when status = 'Rejected' then 1 else 0 end;
   locked : Boolean = case when status = 'Draft' or status = 'Rejected' then false else true end;
   entries : Composition of many TimesheetEntries on entries.timesheet = $self;
 }
@@ -146,7 +146,7 @@ entity Invoices : cuid, managed {
   tax_rate : Decimal(5,2) default 0;
   currency_code : String(3) @mandatory;
   payment_status : String(10) default 'Draft';
-  statusCriticality : Integer = case payment_status when 'Paid' then 3 when 'Issued' then 2 when 'Cancelled' then 1 else 0 end;
+  statusCriticality : Integer = case when payment_status = 'Paid' then 3 when payment_status = 'Issued' then 2 when payment_status = 'Cancelled' then 1 else 0 end;
   issued_at : Timestamp;
   paid_at : Timestamp;
   cancelled_at : Timestamp;
